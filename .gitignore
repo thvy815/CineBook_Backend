@@ -1,0 +1,117 @@
+# =========================
+# .NET build / publish
+# =========================
+bin/
+obj/
+out/
+publish/
+*.user
+*.rsuser
+*.suo
+*.cache
+*.log
+*.tlog
+*.pdb
+*.dbmdl
+*.bak
+*.Backup
+*.snupkg
+*.vshost.*
+*.tmp
+*.xml
+*.dll
+*.exe
+*.appx
+
+# Ignore local NuGet packages
+*.nupkg
+.nuget/
+
+# =========================
+# Docker / Compose
+# =========================
+*.pid
+*.tar
+*.lock
+**/Dockerfile.*
+.env
+.env.*
+docker-compose.override.yml
+docker-compose.debug.yml
+docker-compose.test.yml
+
+# =========================
+# Visual Studio / VSCode
+# =========================
+.vs/
+.vscode/
+.idea/
+*.sln.docstates
+
+# =========================
+# Rider / JetBrains
+# =========================
+.idea/
+*.iml
+
+# =========================
+# System files
+# =========================
+Thumbs.db
+Desktop.ini
+*.DS_Store
+
+# =========================
+# Node / Frontend (nếu có UI)
+# =========================
+node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Secrets / Config
+# =========================
+secrets.json
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+*.secret.json
+
+# =========================
+# Tests / Coverage
+# =========================
+TestResults/
+*.coverage
+*.coveragexml
+*.trx
+*.testresults
+.coverage/
+coverage/
+Reports/
+
+# =========================
+# ReSharper / Rider
+# =========================
+_ReSharper*/
+*.DotSettings.user
+
+# =========================
+# Temporary Files
+# =========================
+*.swp
+*.swo
+*.orig
+*.rej
+*.bak
+*.tmp
+
+# =========================
+# CI/CD Artifacts
+# =========================
+*.coverage
+*.codecov
+*.report.xml
+*.publishsettings
