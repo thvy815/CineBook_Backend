@@ -23,26 +23,42 @@ builder.Services.AddDbContext<MovieDbContext>(opt =>
 		?? builder.Configuration.GetConnectionString("DefaultConnection")
 	));
 
+var tmdbApiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY")
+                 ?? builder.Configuration["TMDB_API_KEY"];
+if (string.IsNullOrEmpty(tmdbApiKey))
+    throw new InvalidOperationException("TMDB_API_KEY not found in environment or appsettings.json");
+
+
+builder.Services.AddHttpClient<TmdbService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "CineBookMovieService");
+});
+
+
 // Dependency Injection
-builder.Services.AddScoped<IMovieRepository, MovieRepository>();
-builder.Services.AddScoped<MovieBusiness>();
+builder.Services.AddScoped<IMovieSummaryRepository, MovieSummaryRepository>();
+builder.Services.AddScoped<IMovieDetailRepository, MovieDetailRepository>();
+builder.Services.AddScoped<MovieSummaryService>();
+builder.Services.AddScoped<MovieDetailService>();
+builder.Services.AddHttpClient<TmdbService>();
+
+// Add API
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
-// Auto apply migration on startup
-using (var scope = app.Services.CreateScope())
-{
-	var db = scope.ServiceProvider.GetRequiredService<MovieDbContext>();
-	db.Database.Migrate();
-	DbInitializer.Initialize(db); // Seed sample database
-}
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+
+app.Services.GetRequiredService<IConfiguration>()["TMDB_API_KEY"] = tmdbApiKey;
 
 app.UseHttpsRedirection();
 app.MapControllers();
