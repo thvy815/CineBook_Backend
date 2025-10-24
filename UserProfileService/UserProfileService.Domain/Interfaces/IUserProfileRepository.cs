@@ -9,6 +9,7 @@ namespace UserProfileService.Domain.Interfaces
 	{
 		// Profiles
 		Task<UserProfile> GetByUserIdAsync(Guid userId); // from AuthService
+		Task<UserProfile> GetByUserProfileIdAsync(Guid userProfileId);
 		Task<UserProfile> GetByIdAsync(Guid id);
 		Task<UserProfile> AddAsync(UserProfile profile);
 		Task<UserProfile> UpdateAsync(UserProfile profile);

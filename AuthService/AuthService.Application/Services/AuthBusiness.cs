@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using AuthService.Application.Client;
 
 namespace AuthService.Application.Services
 {
@@ -21,10 +22,12 @@ namespace AuthService.Application.Services
 		private readonly AuthDbContext _db;
 		private readonly IEmailService _emailService;
 		private readonly IConfiguration _config;
+		private readonly IUserProfileClient _userProfileClient;
 
 		public AuthBusiness(IUserRepository userRepo, IRoleRepository roleRepo,
 							 ITokenService tokenService, AuthDbContext db,
-							 IEmailService emailService, IConfiguration config)
+							 IEmailService emailService, IConfiguration config, 
+							 IUserProfileClient userProfileClient)
 		{
 			_userRepo = userRepo;
 			_roleRepo = roleRepo;
@@ -32,6 +35,7 @@ namespace AuthService.Application.Services
 			_db = db;
 			_emailService = emailService;
 			_config = config;
+			_userProfileClient = userProfileClient;
 		}
 
 		public async Task<AuthResultDto> RegisterAsync(RegisterDto dto)
@@ -59,6 +63,23 @@ namespace AuthService.Application.Services
 			// generate tokens
 			var accessToken = _tokenService.GenerateAccessToken(user);
 			var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));
+
+			// Call UserProfileService
+			var profileDto = new UserProfileCreateDTO
+			{
+				Email = user.Email,
+				Username = user.Username,
+				Fullname = user.Username,
+				AvatarUrl = "https://example.com/default-avatar.png",
+				Gender = "Unknown",
+				DateOfBirth = null,
+				PhoneNumber = user.PhoneNumber,
+				NationalId = user.NationalId,
+				Address = "N/A",
+				Status = "ACTIVE"
+			};
+
+			await _userProfileClient.CreateUserProfileAsync(user.Id, profileDto);
 
 			return new AuthResultDto(true, accessToken, refresh.Token);
 		}

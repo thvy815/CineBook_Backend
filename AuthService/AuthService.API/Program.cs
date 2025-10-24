@@ -7,6 +7,7 @@ using AuthService.Application.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using AuthService.Application.Client;
 
 // Load variables from .env
 Env.Load();
@@ -32,6 +33,11 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthBusiness>();
+
+builder.Services.AddHttpClient<IUserProfileClient, UserProfileClient>(client =>
+{
+	client.BaseAddress = new Uri("https://localhost:7217/"); // URL UserProfileService
+});
 
 // JWT Configuration
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");

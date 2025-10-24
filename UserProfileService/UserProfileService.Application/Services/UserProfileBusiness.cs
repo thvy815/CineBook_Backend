@@ -45,13 +45,46 @@ namespace UserProfileService.Application.Services
 			return MapToReadDto(updated);
 		}
 
-		// Favorites: operate by auth user_id (convert to user_profile_id internally)
-		public async Task<IEnumerable<FavoriteMovieReadDTO>> GetFavoritesByAuthUserIdAsync(Guid userId)
+		// Create Profile if not exists
+		// chỉ dùng nội bộ, trả entity cho các repo hoặc logic khác
+		private async Task<UserProfile> GetOrCreateEntityAsync(Guid userId, UserProfileCreateDTO? dto = null)
 		{
 			var profile = await _repo.GetByUserIdAsync(userId);
-			if (profile == null) return Enumerable.Empty<FavoriteMovieReadDTO>();
+			if (profile == null)
+			{
+				profile = new UserProfile
+				{
+					Id = Guid.NewGuid(),
+					UserId = userId,
+					Email = dto?.Email,
+					Username = dto?.Username,
+					Fullname = dto?.Fullname,
+					AvatarUrl = dto?.AvatarUrl,
+					Gender = dto?.Gender,
+					DateOfBirth = dto?.DateOfBirth ?? default(DateTime),
+					PhoneNumber = dto?.PhoneNumber,
+					NationalId = dto?.NationalId,
+					Address = dto?.Address,
+					Status = dto?.Status ?? "ACTIVE",
+					CreatedAt = DateTime.UtcNow,
+					UpdatedAt = DateTime.UtcNow
+				};
+				await _repo.AddAsync(profile);
+			}
+			return profile;
+		}
 
-			var favs = await _repo.GetFavoritesByUserProfileIdAsync(profile.Id);
+		// public cho Controller, trả DTO
+		public async Task<UserProfileReadDTO> CreateIfNotExistsAsync(Guid userId, UserProfileCreateDTO? dto = null)
+		{
+			var entity = await GetOrCreateEntityAsync(userId, dto);
+			return MapToReadDto(entity);
+		}
+
+		// Favorites: operate by auth user_id (convert to user_profile_id internally)
+		public async Task<IEnumerable<FavoriteMovieReadDTO>> GetFavoritesAsync(Guid userProfileId)
+		{
+			var favs = await _repo.GetFavoritesByUserProfileIdAsync(userProfileId);
 			return favs.Select(f => new FavoriteMovieReadDTO
 			{
 				Id = f.Id,
@@ -61,19 +94,16 @@ namespace UserProfileService.Application.Services
 			});
 		}
 
-		public async Task<bool> AddFavoriteByAuthUserIdAsync(Guid userId, int tmdbId)
+		public async Task<bool> AddFavoriteAsync(Guid userProfileId, int tmdbId)
 		{
-			var profile = await _repo.GetByUserIdAsync(userId);
-			if (profile == null) return false;
-
 			// avoid duplicates
-			var exists = await _repo.GetFavoriteByProfileAndTmdbAsync(profile.Id, tmdbId);
+			var exists = await _repo.GetFavoriteByProfileAndTmdbAsync(userProfileId, tmdbId);
 			if (exists != null) return true; // idempotent
 
 			var fav = new UserFavoriteMovie
 			{
 				Id = Guid.NewGuid(),
-				UserProfileId = profile.Id,
+				UserProfileId = userProfileId,
 				TmdbId = tmdbId,
 				AddedAt = DateTime.UtcNow
 			};
@@ -82,12 +112,9 @@ namespace UserProfileService.Application.Services
 			return true;
 		}
 
-		public async Task<bool> RemoveFavoriteByAuthUserIdAsync(Guid userId, int tmdbId)
+		public async Task<bool> RemoveFavoriteAsync(Guid userProfileId, int tmdbId)
 		{
-			var profile = await _repo.GetByUserIdAsync(userId);
-			if (profile == null) return false;
-
-			var exists = await _repo.GetFavoriteByProfileAndTmdbAsync(profile.Id, tmdbId);
+			var exists = await _repo.GetFavoriteByProfileAndTmdbAsync(userProfileId, tmdbId);
 			if (exists == null) return true; // already removed (idempotent)
 
 			await _repo.RemoveFavoriteAsync(exists);
@@ -108,9 +135,9 @@ namespace UserProfileService.Application.Services
 			});
 		}
 
-		public async Task<UserRankDTO> GetRankForAuthUserAsync(Guid userId)
+		public async Task<UserRankDTO> GetRankForUserProfileAsync(Guid userProfileId)
 		{
-			var profile = await _repo.GetByUserIdAsync(userId);
+			var profile = await _repo.GetByUserProfileIdAsync(userProfileId);
 			if (profile == null) return null;
 
 			var rank = await _repo.GetRankByPointsAsync(profile.LoyaltyPoint);

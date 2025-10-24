@@ -23,6 +23,14 @@ namespace UserProfileService.Infrastructure.Repositories
 				.FirstOrDefaultAsync(p => p.UserId == userId);
 		}
 
+		public async Task<UserProfile> GetByUserProfileIdAsync(Guid userProfileId)
+		{
+			return await _db.UserProfiles
+				.Include(p => p.Rank)
+				.Include(p => p.FavoriteMovies)
+				.FirstOrDefaultAsync(p => p.Id == userProfileId);
+		}
+
 		public async Task<UserProfile> GetByIdAsync(Guid id)
 		{
 			return await _db.UserProfiles

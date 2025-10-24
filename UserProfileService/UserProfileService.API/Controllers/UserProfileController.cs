@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.JsonPatch;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
 using UserProfileService.Application.Services;
@@ -21,31 +20,42 @@ namespace UserProfileService.API.Controllers
 		[HttpGet("by-user/{userId}")]
 		public async Task<IActionResult> GetByUserId(Guid userId)
 		{
-			var res = await _business.GetByUserIdAsync(userId);
+			var res = await _business.CreateIfNotExistsAsync(userId); // Lấy hoặc tạo 1 lần
 			if (res == null) return NotFound();
+			return Ok(res);
+		}
+
+		[HttpPost("by-user/{userId}")]
+		public async Task<IActionResult> CreateProfile(Guid userId, [FromBody] UserProfileCreateDTO dto)
+		{ 
+			var res = await _business.CreateIfNotExistsAsync(userId, dto);
 			return Ok(res);
 		}
 
 		[HttpPut("by-user/{userId}")]
 		public async Task<IActionResult> UpdateProfile(Guid userId, [FromBody] UserProfileUpdateDTO dto)
 		{
-			var res = await _business.UpdateProfileAsync(userId, dto);
+			var res = await _business.CreateIfNotExistsAsync(userId);
 			if (res == null) return NotFound();
-			return Ok(res);
+
+			var updated = await _business.UpdateProfileAsync(userId, dto);
+			return Ok(updated);
 		}
 
 		// Favorites
 		[HttpGet("{userId}/favorites")]
 		public async Task<IActionResult> GetFavorites(Guid userId)
 		{
-			var list = await _business.GetFavoritesByAuthUserIdAsync(userId);
+			var profile = await _business.CreateIfNotExistsAsync(userId);
+			var list = await _business.GetFavoritesAsync(profile.Id);
 			return Ok(list);
 		}
 
 		[HttpPost("{userId}/favorites")]
 		public async Task<IActionResult> AddFavorite(Guid userId, [FromBody] FavoriteMovieCreateDTO dto)
 		{
-			var ok = await _business.AddFavoriteByAuthUserIdAsync(userId, dto.TmdbId);
+			var profile = await _business.CreateIfNotExistsAsync(userId);
+			var ok = await _business.AddFavoriteAsync(profile.Id, dto.TmdbId);
 			if (!ok) return NotFound(); // profile not found
 			return NoContent();
 		}
@@ -53,7 +63,8 @@ namespace UserProfileService.API.Controllers
 		[HttpDelete("{userId}/favorites/{tmdbId}")]
 		public async Task<IActionResult> RemoveFavorite(Guid userId, int tmdbId)
 		{
-			var ok = await _business.RemoveFavoriteByAuthUserIdAsync(userId, tmdbId);
+			var profile = await _business.CreateIfNotExistsAsync(userId);
+			var ok = await _business.RemoveFavoriteAsync(profile.Id, tmdbId);
 			if (!ok) return NotFound();
 			return NoContent();
 		}
@@ -69,7 +80,8 @@ namespace UserProfileService.API.Controllers
 		[HttpGet("{userId}/rank")]
 		public async Task<IActionResult> GetRankForUser(Guid userId)
 		{
-			var rank = await _business.GetRankForAuthUserAsync(userId);
+			var profile = await _business.CreateIfNotExistsAsync(userId);
+			var rank = await _business.GetRankForUserProfileAsync(profile.Id);
 			if (rank == null) return NotFound();
 			return Ok(rank);
 		}
