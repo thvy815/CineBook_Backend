@@ -71,7 +71,7 @@ using (var scope = app.Services.CreateScope())
 {
 	var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
 	db.Database.Migrate(); // Generate database if not exists
-	await DbInitializer.InitializeAsync(db); // Seed sample data
+	//await DbInitializer.InitializeAsync(db); // Seed sample data
 }
 
 // Configure the HTTP request pipeline.

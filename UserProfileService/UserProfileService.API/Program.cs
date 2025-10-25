@@ -34,7 +34,7 @@ using (var scope = app.Services.CreateScope())
 {
 	var db = scope.ServiceProvider.GetRequiredService<UserProfileDbContext>();
 	db.Database.Migrate(); // Update database to latest migration
-	await DbInitializer.SeedAsync(db); // Seed sample data
+	//await DbInitializer.SeedAsync(db); // Seed sample data
 }
 
 // Configure the HTTP request pipeline.

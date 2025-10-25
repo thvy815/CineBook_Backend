@@ -17,7 +17,7 @@ namespace UserProfileService.Domain.Entities
 		public Guid UserId { get; set; }
 
 		[Column("rank_id")]
-		public Guid? RankId { get; set; }
+		public Guid RankId { get; set; }
 
 		[Column("email")]
 		[MaxLength(100)]
@@ -29,17 +29,17 @@ namespace UserProfileService.Domain.Entities
 
 		[Column("fullname")]
 		[MaxLength(100)]
-		public string Fullname { get; set; }
+		public string? Fullname { get; set; }
 
 		[Column("avatar_url")]
-		public string AvatarUrl { get; set; }
+		public string? AvatarUrl { get; set; }
 
 		[Column("gender")]
 		[MaxLength(10)]
 		public string? Gender { get; set; }
 
 		[Column("date_of_birth", TypeName = "date")]
-		public DateTime DateOfBirth { get; set; }
+		public DateTime? DateOfBirth { get; set; }
 
 		[Column("phone_number")]
 		[MaxLength(15)]
@@ -53,7 +53,7 @@ namespace UserProfileService.Domain.Entities
 		public string? Address { get; set; }
 
 		[Column("loyalty_point")]
-		public int LoyaltyPoint { get; set; }
+		public int LoyaltyPoint { get; set; } = 0;
 
 		[Column("status")]
 		[MaxLength(20)]

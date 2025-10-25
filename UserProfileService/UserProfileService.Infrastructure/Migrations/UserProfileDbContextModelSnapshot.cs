@@ -128,7 +128,6 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnName("address");
 
                     b.Property<string>("AvatarUrl")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("avatar_url");
 
@@ -136,7 +135,7 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTime>("DateOfBirth")
+                    b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("date")
                         .HasColumnName("date_of_birth");
 
@@ -147,7 +146,6 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnName("email");
 
                     b.Property<string>("Fullname")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("fullname");
@@ -173,7 +171,7 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnType("character varying(15)")
                         .HasColumnName("phone_number");
 
-                    b.Property<Guid?>("RankId")
+                    b.Property<Guid>("RankId")
                         .HasColumnType("uuid")
                         .HasColumnName("rank_id");
 
@@ -280,7 +278,8 @@ namespace UserProfileService.Infrastructure.Migrations
                     b.HasOne("UserProfileService.Domain.Entities.UserRank", "Rank")
                         .WithMany()
                         .HasForeignKey("RankId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .IsRequired();
 
                     b.Navigation("Rank");
                 });

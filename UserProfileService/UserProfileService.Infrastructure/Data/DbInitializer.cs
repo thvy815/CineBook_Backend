@@ -42,7 +42,7 @@ namespace UserProfileService.Infrastructure.Data
 					NationalId = "123456789",
 					Address = "Hanoi, Vietnam",
 					LoyaltyPoint = 120,
-					RankId = bronze?.Id,
+					RankId = bronze.Id,
 					Status = "ACTIVE",
 					CreatedAt = DateTime.UtcNow,
 					UpdatedAt = DateTime.UtcNow

@@ -69,13 +69,9 @@ namespace AuthService.Application.Services
 			{
 				Email = user.Email,
 				Username = user.Username,
-				Fullname = user.Username,
-				AvatarUrl = "https://example.com/default-avatar.png",
-				Gender = "Unknown",
-				DateOfBirth = null,
 				PhoneNumber = user.PhoneNumber,
 				NationalId = user.NationalId,
-				Address = "N/A",
+				LoyaltyPoint = 0,
 				Status = "ACTIVE"
 			};
 

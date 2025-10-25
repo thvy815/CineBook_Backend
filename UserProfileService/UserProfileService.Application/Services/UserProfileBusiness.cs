@@ -61,7 +61,7 @@ namespace UserProfileService.Application.Services
 					Fullname = dto?.Fullname,
 					AvatarUrl = dto?.AvatarUrl,
 					Gender = dto?.Gender,
-					DateOfBirth = dto?.DateOfBirth ?? default(DateTime),
+					DateOfBirth = dto?.DateOfBirth,
 					PhoneNumber = dto?.PhoneNumber,
 					NationalId = dto?.NationalId,
 					Address = dto?.Address,
@@ -69,7 +69,17 @@ namespace UserProfileService.Application.Services
 					CreatedAt = DateTime.UtcNow,
 					UpdatedAt = DateTime.UtcNow
 				};
+
+				// Tự động set RankId
+				profile.RankId = await GetRankIdByPointsAsync(profile.LoyaltyPoint);
+
 				await _repo.AddAsync(profile);
+			}
+			else
+			{
+				// Nếu profile tồn tại, cập nhật rank dựa trên điểm hiện tại
+				profile.RankId = await GetRankIdByPointsAsync(profile.LoyaltyPoint);
+				await _repo.UpdateAsync(profile);
 			}
 			return profile;
 		}
@@ -79,6 +89,22 @@ namespace UserProfileService.Application.Services
 		{
 			var entity = await GetOrCreateEntityAsync(userId, dto);
 			return MapToReadDto(entity);
+		}
+
+		// Cập nhật LoyaltyPoint và Rank tự động
+		public async Task<UserProfileReadDTO> AddLoyaltyPointsAsync(Guid userId, int points)
+		{
+			var profile = await _repo.GetByUserIdAsync(userId);
+			if (profile == null) return null;
+
+			profile.LoyaltyPoint += points;
+
+			// Cập nhật RankId tự động
+			profile.RankId = await GetRankIdByPointsAsync(profile.LoyaltyPoint);
+
+			profile.UpdatedAt = DateTime.UtcNow;
+			var updated = await _repo.UpdateAsync(profile);
+			return MapToReadDto(updated);
 		}
 
 		// Favorites: operate by auth user_id (convert to user_profile_id internally)
@@ -206,7 +232,7 @@ namespace UserProfileService.Application.Services
 			});
 		}
 
-		// helper mapping
+		// Mapping
 		private UserProfileReadDTO MapToReadDto(UserProfile p)
 		{
 			if (p == null) return null;
@@ -243,6 +269,21 @@ namespace UserProfileService.Application.Services
 			}
 
 			return dto;
+		}
+
+		// Helper: lấy RankId dựa trên điểm
+		private async Task<Guid> GetRankIdByPointsAsync(int loyaltyPoint)
+		{
+			var ranks = await _repo.GetAllRanksAsync();
+			var rank = ranks
+				.OrderByDescending(r => r.MinPoints)
+				.FirstOrDefault(r => loyaltyPoint >= r.MinPoints && loyaltyPoint <= r.MaxPoints);
+
+			if (rank == null)
+			{
+				rank = ranks.OrderBy(r => r.MinPoints).First();
+			}
+			return rank.Id;
 		}
 	}
 }
