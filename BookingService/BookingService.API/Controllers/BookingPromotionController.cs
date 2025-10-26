@@ -1,4 +1,5 @@
 ﻿using BookingService.Application.Services;
+using BookingService.Domain.DTOs;
 using BookingService.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,35 +17,43 @@ namespace BookingService.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _business.GetAllAsync());
+        public async Task<ActionResult<IEnumerable<BookingPromotionDTOs>>> GetAll()
+        {
+            var items = await _business.GetAllAsync();
+            return Ok(items);
+        }
 
         [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<ActionResult<BookingPromotionDTOs>> GetById(Guid id)
         {
-            var result = await _business.GetByIdAsync(id);
-            return result != null ? Ok(result) : NotFound();
+            var item = await _business.GetByIdAsync(id);
+            if (item == null)
+                return NotFound();
+            return Ok(item);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add(BookingPromotion promo)
+        public async Task<ActionResult> Create([FromBody] BookingPromotionDTOs dto)
         {
-            await _business.AddAsync(promo);
-            return Ok();
+            await _business.AddAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, BookingPromotion promo)
+        public async Task<ActionResult> Update(Guid id, [FromBody] BookingPromotionDTOs dto)
         {
-            if (id != promo.Id) return BadRequest("ID mismatch.");
-            await _business.UpdateAsync(promo);
-            return Ok();
+            if (id != dto.Id)
+                return BadRequest("ID mismatch.");
+
+            await _business.UpdateAsync(dto);
+            return NoContent();
         }
 
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<ActionResult> Delete(Guid id)
         {
             await _business.DeleteAsync(id);
-            return Ok();
+            return NoContent();
         }
     }
 }
