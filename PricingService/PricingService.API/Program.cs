@@ -3,6 +3,7 @@ using PricingService.Domain.Interfaces;
 using PricingService.Infrastructure.Data;
 using PricingService.Infrastructure.Repositories;
 using PricingService.Application.Services;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using DotNetEnv;
 
 // Load variables from .env

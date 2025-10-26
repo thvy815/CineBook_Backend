@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PricingService.Application.Services;
+using PricingService.Domain.DTOs;
 using PricingService.Domain.Entities;
 
 namespace PricingService.API.Controllers
@@ -22,35 +23,41 @@ namespace PricingService.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var promo = await _business.GetByIdAsync(id);
-            if (promo == null)
+            var result = await _business.GetByIdAsync(id);
+            if (result == null)
                 return NotFound();
-            return Ok(promo);
+
+            return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Promotion promotion)
+        public async Task<IActionResult> Add([FromBody] PromotionDTOs dto)
         {
-            await _business.AddAsync(promotion);
-            return CreatedAtAction(nameof(GetById), new { id = promotion.Id }, promotion);
+            await _business.AddAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Promotion promotion)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] PromotionDTOs dto)
         {
-            if (id != promotion.Id)
-                return BadRequest("ID mismatch");
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
 
-            await _business.UpdateAsync(promotion);
+            dto.Id = id;
+            await _business.UpdateAsync(dto);
             return NoContent();
         }
-
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
+
             await _business.DeleteAsync(id);
             return NoContent();
         }

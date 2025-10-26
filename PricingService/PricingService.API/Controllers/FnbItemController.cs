@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PricingService.Application.Services;
+using PricingService.Domain.DTOs;
 using PricingService.Domain.Entities;
 
 namespace PricingService.API.Controllers
@@ -22,35 +23,42 @@ namespace PricingService.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var item = await _business.GetByIdAsync(id);
-            if (item == null)
+            var result = await _business.GetByIdAsync(id);
+            if (result == null)
                 return NotFound();
-            return Ok(item);
+
+            return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] FnbItem fnbItem)
+        public async Task<IActionResult> Add([FromBody] FnbItemDTOs dto)
         {
-            await _business.AddAsync(fnbItem);
-            return CreatedAtAction(nameof(GetById), new { id = fnbItem.Id }, fnbItem);
+            await _business.AddAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] FnbItem fnbItem)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] FnbItemDTOs dto)
         {
-            if (id != fnbItem.Id)
-                return BadRequest("ID mismatch");
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
 
-            await _business.UpdateAsync(fnbItem);
+            dto.Id = id;
+            await _business.UpdateAsync(dto);
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
+
             await _business.DeleteAsync(id);
             return NoContent();
         }

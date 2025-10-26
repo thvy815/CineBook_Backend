@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PricingService.Application.Services;
+using PricingService.Domain.DTOs;
 using PricingService.Domain.Entities;
 
 namespace PricingService.API.Controllers
@@ -22,35 +23,42 @@ namespace PricingService.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var seatPrice = await _business.GetByIdAsync(id);
-            if (seatPrice == null)
+            var result = await _business.GetByIdAsync(id);
+            if (result == null)
                 return NotFound();
-            return Ok(seatPrice);
+
+            return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] SeatPrice seatPrice)
+        public async Task<IActionResult> Add([FromBody] SeatPriceDTOs dto)
         {
-            await _business.AddAsync(seatPrice);
-            return CreatedAtAction(nameof(GetById), new { id = seatPrice.Id }, seatPrice);
+            await _business.AddAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] SeatPrice seatPrice)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] SeatPriceDTOs dto)
         {
-            if (id != seatPrice.Id)
-                return BadRequest("ID in URL does not match ID in body");
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
 
-            await _business.UpdateAsync(seatPrice);
+            dto.Id = id;
+            await _business.UpdateAsync(dto);
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var existing = await _business.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
+
             await _business.DeleteAsync(id);
             return NoContent();
         }
