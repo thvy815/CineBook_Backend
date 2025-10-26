@@ -15,36 +15,83 @@ namespace MovieService.API.Controllers
             _service = service;
         }
 
+        // 🟢 Lấy danh sách tất cả phim
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _service.GetAllAsync());
+        public async Task<IActionResult> GetAll()
+        {
+            var movies = await _service.GetAllAsync();
+            return Ok(movies);
+        }
 
-        [HttpGet("{id}")]
+        // 🟢 Lấy chi tiết phim theo ID
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _service.GetByIdAsync(id);
-            return result == null ? NotFound() : Ok(result);
+            if (result == null)
+                return NotFound(new { message = $"Movie with ID {id} not found." });
+            return Ok(result);
         }
 
+        // 🟢 Tạo phim mới (nếu nhập tay)
         [HttpPost]
-        public async Task<IActionResult> Create(MovieDetail movie)
+        public async Task<IActionResult> Create([FromBody] MovieDetail movie)
         {
+            if (movie == null)
+                return BadRequest(new { message = "Invalid movie data." });
+
             await _service.AddAsync(movie);
             return CreatedAtAction(nameof(GetById), new { id = movie.Id }, movie);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, MovieDetail movie)
+        // 🟡 Cập nhật thông tin phim
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] MovieDetail movie)
         {
-            if (id != movie.Id) return BadRequest();
-            await _service.UpdateAsync(movie);
-            return NoContent();
+            if (id != movie.Id)
+                return BadRequest(new { message = "Movie ID mismatch." });
+
+            var updated = await _service.UpdateAsync(movie);
+            if (!updated)
+                return NotFound(new { message = $"Movie with ID {id} not found." });
+
+            return Ok(new { message = "Movie updated successfully." });
         }
 
-        [HttpDelete("{id}")]
+        // 🔴 Xóa phim
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted)
+                return NotFound(new { message = $"Movie with ID {id} not found." });
+
+            return Ok(new { message = "Movie deleted successfully." });
+        }
+
+        // 🔍 Tìm kiếm phim theo từ khóa
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return BadRequest(new { message = "Keyword is required." });
+
+            var results = await _service.SearchAsync(keyword);
+            if (results == null || !results.Any())
+                return NotFound(new { message = "No movies found matching the keyword." });
+
+            return Ok(results);
+        }
+
+        // 🎬 Lọc theo trạng thái (đang chiếu hoặc sắp chiếu)
+        [HttpGet("status/{status}")]
+        public async Task<IActionResult> GetByStatus(string status)
+        {
+            var results = await _service.GetByStatusAsync(status);
+            if (results == null || !results.Any())
+                return NotFound(new { message = $"No movies found with status '{status}'." });
+
+            return Ok(results);
         }
     }
 }
