@@ -38,9 +38,7 @@ builder.Services.AddHttpClient<TmdbService>(client =>
 
 
 // Dependency Injection
-builder.Services.AddScoped<IMovieSummaryRepository, MovieSummaryRepository>();
 builder.Services.AddScoped<IMovieDetailRepository, MovieDetailRepository>();
-builder.Services.AddScoped<MovieSummaryService>();
 builder.Services.AddScoped<MovieDetailService>();
 builder.Services.AddHttpClient<TmdbService>();
 

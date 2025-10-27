@@ -17,7 +17,7 @@ namespace MovieService.Infrastructure.Repositories
         public async Task<IEnumerable<MovieDetail>> GetAllAsync()
             => await _db.MovieDetails.ToListAsync();
 
-        public async Task<MovieDetail?> GetByIdAsync(int id)
+        public async Task<MovieDetail?> GetByIdAsync(Guid id)
             => await _db.MovieDetails.FindAsync(id);
 
         public async Task AddAsync(MovieDetail movie)
@@ -32,7 +32,7 @@ namespace MovieService.Infrastructure.Repositories
             await _db.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(Guid id)
         {
             var entity = await _db.MovieDetails.FindAsync(id);
             if (entity != null)
