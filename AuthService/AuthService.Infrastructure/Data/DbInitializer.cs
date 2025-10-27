@@ -13,7 +13,10 @@ namespace AuthService.Infrastructure.Data
 			{
 				context.Roles.AddRange(
 					new Role { Name = "Admin", Description = "Administrator" },
-					new Role { Name = "Customer", Description = "Default customer role" }
+					new Role { Name = "Customer", Description = "Default customer role" },
+					new Role { Name = "Guest", Description = "Buy tickets without registration" },
+					new Role { Name = "Manager", Description = "Manager theater" },
+					new Role { Name = "Staff", Description = "Staff theater" }
 				);
 				await context.SaveChangesAsync();
 			}

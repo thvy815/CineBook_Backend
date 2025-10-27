@@ -36,10 +36,10 @@ namespace UserProfileService.Domain.Entities
 
 		[Column("gender")]
 		[MaxLength(10)]
-		public string? Gender { get; set; }
+		public string Gender { get; set; }
 
 		[Column("date_of_birth", TypeName = "date")]
-		public DateTime? DateOfBirth { get; set; }
+		public DateTime DateOfBirth { get; set; }
 
 		[Column("phone_number")]
 		[MaxLength(15)]

@@ -22,68 +22,6 @@ namespace UserProfileService.Infrastructure.Data
 				);
 				await context.SaveChangesAsync();
 			}
-
-			// Seed user profiles 
-			if (!context.UserProfiles.Any())
-			{
-				var bronze = context.UserRanks.OrderBy(r => r.MinPoints).FirstOrDefault();
-
-				var profile = new UserProfile
-				{
-					Id = Guid.NewGuid(),
-					UserId = Guid.NewGuid(), // sample AuthService id
-					Email = "jane.doe@example.com",
-					Username = "janedoe",
-					Fullname = "Jane Doe",
-					AvatarUrl = "default-avatar.png", 
-					Gender = "female",
-					DateOfBirth = new DateTime(1992, 5, 15),
-					PhoneNumber = "0123456789",
-					NationalId = "123456789",
-					Address = "Hanoi, Vietnam",
-					LoyaltyPoint = 120,
-					RankId = bronze.Id,
-					Status = "ACTIVE",
-					CreatedAt = DateTime.UtcNow,
-					UpdatedAt = DateTime.UtcNow
-				};
-
-				context.UserProfiles.Add(profile);
-				await context.SaveChangesAsync();
-
-				// Seed manager sample
-				context.ManagerProfiles.Add(new ManagerProfile
-				{
-					Id = Guid.NewGuid(),
-					UserProfileId = profile.Id,
-					ManagedCinemaId = Guid.NewGuid(),
-					HireDate = new DateTime(2020, 1, 1),
-					CreatedAt = DateTime.UtcNow,
-					UpdatedAt = DateTime.UtcNow
-				});
-
-				// Seed staff sample
-				context.StaffProfiles.Add(new StaffProfile
-				{
-					Id = Guid.NewGuid(),
-					UserProfileId = profile.Id,
-					ManagedCinemaId = Guid.NewGuid(),
-					HireDate = new DateTime(2021, 6, 1),
-					CreatedAt = DateTime.UtcNow,
-					UpdatedAt = DateTime.UtcNow
-				});
-
-				// Seed favorite movies sample
-				context.UserFavoriteMovies.Add(new UserFavoriteMovie
-				{
-					Id = Guid.NewGuid(),
-					UserProfileId = profile.Id,
-					TmdbId = 500,
-					AddedAt = DateTime.UtcNow
-				});
-
-				await context.SaveChangesAsync();
-			}
 		}
 	}
 }

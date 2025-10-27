@@ -30,8 +30,6 @@ namespace AuthService.Infrastructure.Data
 				.WithMany(u => u.RefreshTokens)
 				.HasForeignKey(rt => rt.UserId)
 				.OnDelete(DeleteBehavior.Cascade);
-
-			// seed roles maybe via DbInitializer
 		}
 	}
 }	

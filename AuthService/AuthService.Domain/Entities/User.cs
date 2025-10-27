@@ -28,6 +28,17 @@ namespace AuthService.Domain.Entities
 		[Column("username")]
 		public string Username { get; set; }
 
+		[Column("fullname")]
+		[MaxLength(100)]
+		public string Fullname { get; set; }
+
+		[Column("gender")]
+		[MaxLength(10)]
+		public string Gender { get; set; }
+
+		[Column("date_of_birth", TypeName = "date")]
+		public DateTime DateOfBirth { get; set; }
+
 		[MaxLength(15)]
 		[Column("phone_number")]
 		public string PhoneNumber { get; set; }

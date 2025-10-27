@@ -34,7 +34,8 @@ namespace UserProfileService.Application.Services
 			p.Fullname = update.Fullname ?? p.Fullname;
 			p.AvatarUrl = update.AvatarUrl ?? p.AvatarUrl;
 			p.Gender = update.Gender ?? p.Gender;
-			p.DateOfBirth = update.DateOfBirth ?? p.DateOfBirth;
+			if (update.DateOfBirth != default(DateTime))
+				p.DateOfBirth = update.DateOfBirth;
 			p.PhoneNumber = update.PhoneNumber ?? p.PhoneNumber;
 			p.NationalId = update.NationalId ?? p.NationalId;
 			p.Address = update.Address ?? p.Address;
@@ -61,7 +62,7 @@ namespace UserProfileService.Application.Services
 					Fullname = dto?.Fullname,
 					AvatarUrl = dto?.AvatarUrl,
 					Gender = dto?.Gender,
-					DateOfBirth = dto?.DateOfBirth,
+					DateOfBirth = dto?.DateOfBirth ?? DateTime.MinValue,
 					PhoneNumber = dto?.PhoneNumber,
 					NationalId = dto?.NationalId,
 					Address = dto?.Address,

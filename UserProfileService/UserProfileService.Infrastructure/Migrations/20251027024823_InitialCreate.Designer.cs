@@ -12,7 +12,7 @@ using UserProfileService.Infrastructure.Data;
 namespace UserProfileService.Infrastructure.Migrations
 {
     [DbContext(typeof(UserProfileDbContext))]
-    [Migration("20251025061124_InitialCreate")]
+    [Migration("20251027024823_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -138,7 +138,7 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<DateTime?>("DateOfBirth")
+                    b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("date")
                         .HasColumnName("date_of_birth");
 
@@ -154,6 +154,7 @@ namespace UserProfileService.Infrastructure.Migrations
                         .HasColumnName("fullname");
 
                     b.Property<string>("Gender")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
                         .HasColumnName("gender");

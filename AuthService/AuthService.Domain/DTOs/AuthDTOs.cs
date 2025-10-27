@@ -7,6 +7,9 @@ namespace AuthService.Domain.DTOs
 		string Email,
 		string Username,
 		string Password,
+		string Fullname,
+		string Gender,
+		DateTime DateOfBirth,
 		string PhoneNumber,
 		string NationalId
 	);
