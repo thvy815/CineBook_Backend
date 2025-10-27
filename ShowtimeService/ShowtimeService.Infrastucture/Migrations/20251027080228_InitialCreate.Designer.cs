@@ -9,10 +9,10 @@ using ShowtimeService.Infrastructure.Data;
 
 #nullable disable
 
-namespace ShowtimeService.Infrastructure.Data.Migrations
+namespace ShowtimeService.Infrastructure.Migrations
 {
     [DbContext(typeof(ShowtimeDbContext))]
-    [Migration("20251026144609_InitialCreate")]
+    [Migration("20251027080228_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -52,6 +52,10 @@ namespace ShowtimeService.Infrastructure.Data.Migrations
 
                     b.Property<int>("SeatCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TheaterId")
                         .HasColumnType("uuid");
@@ -172,6 +176,10 @@ namespace ShowtimeService.Infrastructure.Data.Migrations
 
                     b.Property<Guid>("ProvinceId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

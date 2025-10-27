@@ -22,7 +22,8 @@ namespace ShowtimeService.Application.Services
                     Name = t.Name,
                     Address = t.Address,
                     Description = t.Description,
-                    ProvinceId = t.ProvinceId
+                    ProvinceId = t.ProvinceId,
+                    Status = t.Status
                 }).ToListAsync();
         }
 
@@ -34,7 +35,8 @@ namespace ShowtimeService.Application.Services
                 Name = dto.Name,
                 Address = dto.Address,
                 Description = dto.Description,
-                ProvinceId = dto.ProvinceId
+                ProvinceId = dto.ProvinceId,
+                Status = dto.Status
             };
             _context.Theaters.Add(entity);
             await _context.SaveChangesAsync();
@@ -44,7 +46,8 @@ namespace ShowtimeService.Application.Services
                 Name = entity.Name,
                 Address = entity.Address,
                 Description = entity.Description,
-                ProvinceId = entity.ProvinceId
+                ProvinceId = entity.ProvinceId,
+                Status = entity.Status
             };
         }
     }

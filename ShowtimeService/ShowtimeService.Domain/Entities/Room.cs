@@ -9,6 +9,8 @@ namespace ShowtimeService.Domain.Entities
         public Guid TheaterId { get; set; }
         public string Name { get; set; }
         public int SeatCount { get; set; }
+        public string Status { get; set; } = "Active";
+
 
         // Navigation properties
         public Theater Theater { get; set; }

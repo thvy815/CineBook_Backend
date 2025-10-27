@@ -25,8 +25,4 @@
 		<ProjectReference Include="..\ShowtimeService.Domain\ShowtimeService.Domain.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Data\Migrations\" />
-	</ItemGroup>
-
 </Project>

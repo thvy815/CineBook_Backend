@@ -8,7 +8,7 @@ using ShowtimeService.Infrastructure.Data;
 
 #nullable disable
 
-namespace ShowtimeService.Infrastructure.Data.Migrations
+namespace ShowtimeService.Infrastructure.Migrations
 {
     [DbContext(typeof(ShowtimeDbContext))]
     partial class ShowtimeDbContextModelSnapshot : ModelSnapshot
@@ -49,6 +49,10 @@ namespace ShowtimeService.Infrastructure.Data.Migrations
 
                     b.Property<int>("SeatCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TheaterId")
                         .HasColumnType("uuid");
@@ -169,6 +173,10 @@ namespace ShowtimeService.Infrastructure.Data.Migrations
 
                     b.Property<Guid>("ProvinceId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

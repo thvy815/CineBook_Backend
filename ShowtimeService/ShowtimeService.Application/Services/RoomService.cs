@@ -22,7 +22,8 @@ namespace ShowtimeService.Application.Services
                     Id = r.Id,
                     TheaterId = r.TheaterId,
                     Name = r.Name,
-                    SeatCount = r.SeatCount
+                    SeatCount = r.SeatCount,
+                    Status = r.Status
                 }).ToListAsync();
         }
 
@@ -33,7 +34,8 @@ namespace ShowtimeService.Application.Services
                 Id = Guid.NewGuid(),
                 TheaterId = dto.TheaterId,
                 Name = dto.Name,
-                SeatCount = dto.SeatCount
+                SeatCount = dto.SeatCount,
+                Status = dto.Status
             };
             _context.Rooms.Add(entity);
             await _context.SaveChangesAsync();
@@ -42,7 +44,8 @@ namespace ShowtimeService.Application.Services
                 Id = entity.Id,
                 TheaterId = entity.TheaterId,
                 Name = entity.Name,
-                SeatCount = entity.SeatCount
+                SeatCount = entity.SeatCount,
+                Status = entity.Status
             };
         }
     }
