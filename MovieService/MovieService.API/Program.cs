@@ -10,6 +10,18 @@ Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+//Nối qua FE
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .WithOrigins("http://localhost:5173", "https://localhost:5173") // FE port
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
+
+
 // Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -59,5 +71,7 @@ if (app.Environment.IsDevelopment())
 app.Services.GetRequiredService<IConfiguration>()["TMDB_API_KEY"] = tmdbApiKey;
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+
 app.MapControllers();
 app.Run();

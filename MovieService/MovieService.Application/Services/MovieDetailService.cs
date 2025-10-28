@@ -18,7 +18,7 @@ namespace MovieService.Application.Services
         public async Task<IEnumerable<MovieDetail>> GetAllAsync()
             => await _db.MovieDetails.ToListAsync();
 
-        public async Task<MovieDetail?> GetByIdAsync(int id)
+        public async Task<MovieDetail?> GetByIdAsync(Guid id)
             => await _db.MovieDetails.FindAsync(id);
 
         public async Task AddAsync(MovieDetail movie)
@@ -37,7 +37,7 @@ namespace MovieService.Application.Services
             return true;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(Guid id)
         {
             var movie = await _db.MovieDetails.FindAsync(id);
             if (movie == null) return false;
