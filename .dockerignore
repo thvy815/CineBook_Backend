@@ -1,0 +1,51 @@
+# ------------------------------
+# Ignore build artifacts
+# ------------------------------
+**/bin/
+**/obj/
+**/out/
+
+# ------------------------------
+# Ignore user-specific files
+# ------------------------------
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ------------------------------
+# Ignore Visual Studio specific folders
+# ------------------------------
+.vs/
+.idea/
+.vscode/
+
+# ------------------------------
+# Ignore temporary files
+# ------------------------------
+*.swp
+*.tmp
+*.log
+*.vspscc
+*.vssscc
+*.cache
+*.pdb
+
+# ------------------------------
+# Ignore git-related files
+# ------------------------------
+.git/
+.gitignore
+.gitattributes
+
+# ------------------------------
+# Ignore Docker-related files
+# ------------------------------
+docker-compose.override.yml
+.env
+
+# ------------------------------
+# Ignore OS-generated files
+# ------------------------------
+Thumbs.db
+.DS_Store

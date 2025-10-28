@@ -37,11 +37,6 @@ builder.Services.AddScoped<SeatService>();
 builder.Services.AddScoped<ShowtimeBusiness>();
 builder.Services.AddScoped<ShowtimeSeatService>();
 
-// Add API
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
