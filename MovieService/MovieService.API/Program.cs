@@ -28,7 +28,6 @@ var tmdbApiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY")
 if (string.IsNullOrEmpty(tmdbApiKey))
     throw new InvalidOperationException("TMDB_API_KEY not found in environment or appsettings.json");
 
-
 builder.Services.AddHttpClient<TmdbService>(client =>
 {
     client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
@@ -36,16 +35,21 @@ builder.Services.AddHttpClient<TmdbService>(client =>
     client.DefaultRequestHeaders.Add("User-Agent", "CineBookMovieService");
 });
 
-
 // Dependency Injection
 builder.Services.AddScoped<IMovieDetailRepository, MovieDetailRepository>();
 builder.Services.AddScoped<MovieDetailService>();
 builder.Services.AddHttpClient<TmdbService>();
 
-// Add API
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Allow CORS for React frontend
+builder.Services.AddCors(options =>
+{
+	options.AddPolicy("AllowFrontend", policy =>
+	{
+		policy.WithOrigins("http://localhost:5173") 
+			  .AllowAnyHeader()
+			  .AllowAnyMethod();
+	});
+});
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
@@ -55,9 +59,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
 app.Services.GetRequiredService<IConfiguration>()["TMDB_API_KEY"] = tmdbApiKey;
 
+app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
