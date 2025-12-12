@@ -48,5 +48,26 @@ namespace ShowtimeService.API.Controllers
         {
             return await _business.DeleteAsync(id) ? Ok() : NotFound();
         }
+
+        [HttpPost("generate-auto")]
+        public async Task<IActionResult> Generate(Guid theaterId, Guid roomId)
+        {
+            await _business.GenerateAutoShowtimesAsync(theaterId, roomId);
+
+            return Ok(new
+            {
+                message = "Đã tự động tạo suất chiếu cho 5 ngày tiếp theo."
+            });
+        }
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> Filter(
+           [FromQuery] Guid? theaterId,
+           [FromQuery] Guid? movieId,
+           [FromQuery] string? date)
+        {
+            var result = await _business.FilterAsync(theaterId, movieId, date);
+            return Ok(result);
+        }
     }
 }

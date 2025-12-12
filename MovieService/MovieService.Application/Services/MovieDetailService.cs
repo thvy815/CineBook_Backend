@@ -57,6 +57,13 @@ namespace MovieService.Application.Services
             => await _db.MovieDetails
                 .Where(m => m.Status.ToLower() == status.ToLower())
                 .ToListAsync();
+
+        public async Task<List<MovieDetail>> GetByIdsAsync(List<Guid> ids)
+        {
+            return await _db.MovieDetails
+                .Where(m => ids.Contains(m.Id))
+                .ToListAsync();
+        }
     }
 
 }

@@ -17,4 +17,11 @@
         public int SeatCount { get; set; }
         public string Status { get; set; }
     }
+
+    public class AutoCreateRoomDto
+    {
+        public Guid TheaterId { get; set; }
+        public int NumberOfRooms { get; set; }
+        public int DefaultSeatCount { get; set; } = 100; // số ghế mặc định
+    }
 }

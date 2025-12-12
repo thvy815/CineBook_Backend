@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MovieService.Domain.Entities;
 using MovieService.Application.Services;
+using Microsoft.EntityFrameworkCore;
+using MovieService.Domain.DTOs;
 
 namespace MovieService.API.Controllers
 {
@@ -93,5 +95,32 @@ namespace MovieService.API.Controllers
 
             return Ok(results);
         }
+
+        [HttpGet("status/now-playing")]
+        public async Task<IActionResult> GetNowPlaying()
+        {
+            var movies = await _service.GetByStatusAsync("Now Playing");
+            return Ok(movies);
+        }
+
+        [HttpPost("by-ids")]
+        public async Task<IActionResult> GetByIds([FromBody] List<Guid> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return BadRequest(new { message = "Movie ID list cannot be empty." });
+
+            var movies = await _service.GetByIdsAsync(ids);
+
+            var result = movies.Select(m => new MovieDto
+            {
+                Id = m.Id,
+                TmdbId = m.TmdbId,
+                Title = m.Title,
+                PosterUrl = m.PosterUrl
+            }).ToList();
+
+            return Ok(result);
+        }
+
     }
 }

@@ -9,6 +9,10 @@ services:
       - "5001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
 
   bookingservice:
     build:
@@ -39,6 +43,7 @@ services:
       dockerfile: PricingService/PricingService.API/Dockerfile
     ports:
       - "5005:8080"
+
 
   userprofileservice:
     build:
