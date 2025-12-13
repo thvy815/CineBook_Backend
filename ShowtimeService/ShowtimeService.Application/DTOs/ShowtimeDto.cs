@@ -15,6 +15,7 @@
             public string TheaterAddress { get; set; } = "";
 
             public Guid RoomId { get; set; }
+            public string RoomName { get; set; } = "";
 
             public DateTime StartTime { get; set; }
             public string StartTimeFormatted { get; set; } = "";

@@ -4,6 +4,7 @@ using ShowtimeService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Xml.Serialization;
 using ShowtimeService.Application.DTOs.ShowtimeService.Application.DTOs;
+using System.Globalization;
 
 namespace ShowtimeService.Application.Services
 {
@@ -258,6 +259,83 @@ namespace ShowtimeService.Application.Services
             return result;
         }
 
+        public async Task<IEnumerable<ShowtimeDto>> FilterShowtimesAsync(
+       Guid? theaterId,
+       Guid? movieId,
+       string date)
+        {
+            var query = _context.Showtimes.AsNoTracking().AsQueryable();
+
+            if (theaterId.HasValue)
+                query = query.Where(s => s.TheaterId == theaterId.Value);
+
+            if (movieId.HasValue)
+                query = query.Where(s => s.MovieId == movieId.Value);
+
+            if (!string.IsNullOrEmpty(date))
+            {
+                string[] formats = new string[]
+                {
+                "dd/MM/yyyy", "d/M/yyyy",
+                "dd-MM-yyyy", "d-M-yyyy",
+                "MM/dd/yyyy", "M/d/yyyy",
+                "MM-dd-yyyy", "M-d-yyyy",
+                "yyyy/MM/dd", "yyyy-M-d", "yyyy-MM-dd"
+                };
+
+                if (!DateTime.TryParseExact(date, formats, CultureInfo.InvariantCulture,
+                                            DateTimeStyles.None, out DateTime parsedDate))
+                    throw new ArgumentException("Định dạng ngày không hợp lệ");
+
+                var vnZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var startUtc = TimeZoneInfo.ConvertTimeToUtc(parsedDate.Date, vnZone);
+                var endUtc = TimeZoneInfo.ConvertTimeToUtc(parsedDate.Date.AddDays(1), vnZone);
+
+                query = query.Where(s => s.StartTime >= startUtc && s.StartTime < endUtc);
+            }
+
+            // Join với Movie, Theater, Room
+            var showtimes = await query
+                .Join(_context.Theaters,
+                      s => s.TheaterId,
+                      t => t.Id,
+                      (s, t) => new { s, t })
+                .Join(_context.Rooms,
+                      st => st.s.RoomId,
+                      r => r.Id,
+                      (st, r) => new
+                      {
+                          Showtime = st.s,
+                          Theater = st.t,
+                          Room = r
+                      })
+                .OrderBy(x => x.Showtime.StartTime)
+                .ToListAsync();
+            var movieIds = showtimes.Select(x => x.Showtime.MovieId).Distinct().ToList();
+            var movies = await _movieClient.GetByIdsAsync(movieIds);
+            var result = showtimes.Select(x =>
+            {
+                var movie = movies.FirstOrDefault(m => m.Id == x.Showtime.MovieId);
+
+                return new ShowtimeDto
+                {
+                    Id = x.Showtime.Id,
+                    MovieId = x.Showtime.MovieId,
+                    MovieTitle = movie?.Title ?? "",
+                    PosterUrl = movie?.PosterUrl ?? "",
+                    TheaterId = x.Theater.Id,
+                    TheaterName = x.Theater.Name,
+                    TheaterAddress = x.Theater.Address,
+                    RoomId = x.Room.Id,
+                    RoomName = x.Room.Name,
+
+                    StartTime = x.Showtime.StartTime,
+                    StartTimeFormatted = x.Showtime.StartTime.ToString("HH:mm"),
+                    Date = x.Showtime.StartTime.ToString("yyyy-MM-dd")
+                };
+            });
+            return result;
+        }
 
 
     }

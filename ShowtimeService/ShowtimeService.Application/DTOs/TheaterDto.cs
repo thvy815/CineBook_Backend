@@ -25,4 +25,6 @@
         public Guid ProvinceId { get; set; }
         public int NumberOfTheaters { get; set; }
     }
+
+
 }
