@@ -26,8 +26,8 @@ namespace MovieService.API.Controllers
         }
 
         // 🟢 Lấy chi tiết phim theo ID
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
+        [HttpGet("{id:Guid}")]
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
             if (result == null)
@@ -47,7 +47,7 @@ namespace MovieService.API.Controllers
         }
 
         // 🟡 Cập nhật thông tin phim
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:Guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] MovieDetail movie)
         {
             if (id != movie.Id)
@@ -61,8 +61,8 @@ namespace MovieService.API.Controllers
         }
 
         // 🔴 Xóa phim
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("{id:Guid}")]
+        public async Task<IActionResult> Delete(Guid id)
         {
             var deleted = await _service.DeleteAsync(id);
             if (!deleted)
