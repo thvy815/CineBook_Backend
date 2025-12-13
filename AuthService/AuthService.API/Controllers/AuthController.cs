@@ -28,7 +28,7 @@ namespace AuthService.API.Controllers
 		{
 			var res = await _auth.LoginAsync(dto);
 			if (!res.Success) return Unauthorized(new { message = res.Message });
-			return Ok(new { accessToken = res.AccessToken, refreshToken = res.RefreshToken });
+			return Ok(new { accessToken = res.AccessToken, refreshToken = res.RefreshToken, user = res.User});
 		}
 
 		[HttpPost("refresh-token")]

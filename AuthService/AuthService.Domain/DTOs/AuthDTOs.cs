@@ -36,6 +36,14 @@ namespace AuthService.Domain.DTOs
 		string? AccessToken = null,
 		string? RefreshToken = null,
 		string? Message = null,
-		string? Error = null
+		string? Error = null,
+        UserDto? User = null 
+    );
+
+    public record UserDto(
+		Guid Id,
+		string Username,
+		string Fullname,
+		string Email
 	);
 }

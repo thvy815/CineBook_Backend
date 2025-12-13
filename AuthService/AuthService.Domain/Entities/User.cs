@@ -34,10 +34,10 @@ namespace AuthService.Domain.Entities
 
 		[Column("gender")]
 		[MaxLength(10)]
-		public string Gender { get; set; }
+		public string? Gender { get; set; }
 
 		[Column("date_of_birth", TypeName = "date")]
-		public DateTime DateOfBirth { get; set; }
+		public DateTime? DateOfBirth { get; set; }
 
 		[MaxLength(15)]
 		[Column("phone_number")]
@@ -45,7 +45,7 @@ namespace AuthService.Domain.Entities
 
 		[MaxLength(20)]
 		[Column("national_id")]
-		public string NationalId { get; set; }
+		public string? NationalId { get; set; }
 
 		[Required, MaxLength(255)]
 		[Column("password_hash")]
