@@ -38,61 +38,103 @@ namespace AuthService.Application.Services
 			_userProfileClient = userProfileClient;
 		}
 
-		public async Task<AuthResultDto> RegisterAsync(RegisterDto dto)
+        public async Task<AuthResultDto> RegisterAsync(RegisterDto dto)
+        {
+            if (await _userRepo.ExistsByEmailAsync(dto.Email))
+                return new AuthResultDto(false, Message: "Email đã được sử dụng");
+
+            if (await _userRepo.ExistsByPhone(dto.PhoneNumber))
+                return new AuthResultDto(false, Message: "SĐT đã được sử dụng");
+
+            if (await _userRepo.ExistsByUsername(dto.Username))
+                return new AuthResultDto(false, Message: "Username đã tồn tại");
+
+            var customerRole = await _roleRepo.GetByNameAsync("Customer")
+                ?? await _roleRepo.GetByNameAsync("customer");
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = dto.Email,
+                Username = dto.Username,
+                Fullname = dto.Fullname,
+                PhoneNumber = dto.PhoneNumber,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                RoleId = customerRole?.Id ?? 2,
+                CreatedAt = DateTime.UtcNow,
+                Status = "ACTIVE"
+            };
+
+            await _userRepo.CreateAsync(user);
+
+            try
+            {
+                // generate tokens
+                var accessToken = _tokenService.GenerateAccessToken(user);
+                var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));
+
+                var profileDto = new UserProfileCreateDTO
+                {
+                    Email = user.Email,
+                    Username = user.Username,
+                    Fullname = user.Fullname,
+                    PhoneNumber = user.PhoneNumber,
+                    LoyaltyPoint = 0,
+                    Status = "ACTIVE"
+                };
+
+                await _userProfileClient.CreateUserProfileAsync(user.Id, profileDto);
+
+                return new AuthResultDto(true, accessToken, refresh.Token);
+            }
+            catch (Exception ex)
+            {
+                // rollback user nếu profile fail
+                await _userRepo.DeleteAsync(user);
+
+                // log để debug
+                Console.WriteLine($"Create profile failed: {ex.Message}");
+                Console.WriteLine("==== USER PROFILE SERVICE ERROR ====");
+                Console.WriteLine($"UserId: {user.Id}");
+                Console.WriteLine($"Email: {user.Email}");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine("===================================");
+
+                return new AuthResultDto(
+                    false,
+                    Message: "Đăng ký thất bại, vui lòng thử lại sau"
+                );
+            }
+        }
+
+        public async Task<AuthResultDto> LoginAsync(LoginDto dto)
 		{
-			if (await _userRepo.ExistsByEmailAsync(dto.Email))
-				return new AuthResultDto(false, Message: "Email đã được sử dụng");
+            if (string.IsNullOrWhiteSpace(dto.Identifier) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return new AuthResultDto(false, Message: "Thiếu thông tin đăng nhập");
+            }
 
-			var customerRole = await _roleRepo.GetByNameAsync("Customer") ?? await _roleRepo.GetByNameAsync("customer");
+            User? user = null;
 
-			var user = new User
-			{
-				Id = Guid.NewGuid(),
-				Email = dto.Email,
-				Username = dto.Username,
-				Fullname = dto.Fullname,
-				Gender = dto.Gender,
-				DateOfBirth = dto.DateOfBirth,
-				PhoneNumber = dto.PhoneNumber,
-				NationalId = dto.NationalId,
-				PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-				RoleId = customerRole?.Id ?? 2,
-				CreatedAt = DateTime.UtcNow,
-				Status = "ACTIVE"
-			};
+            switch (LoginIdentifierHelper.Detect(dto.Identifier))
+            {
+                case LoginIdentifierType.Email:
+                    user = await _userRepo.GetByEmailAsync(dto.Identifier);
+                    break;
 
-			await _userRepo.CreateAsync(user);
+                case LoginIdentifierType.Phone:
+                    user = await _userRepo.GetByPhoneAsync(dto.Identifier);
+                    break;
 
-			// generate tokens
-			var accessToken = _tokenService.GenerateAccessToken(user);
-			var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));
+                case LoginIdentifierType.Username:
+                    user = await _userRepo.GetByUsernameAsync(dto.Identifier);
+                    break;
+            }
 
-			// Call UserProfileService
-			var profileDto = new UserProfileCreateDTO
-			{
-				Email = user.Email,
-				Username = user.Username,
-				Fullname = user.Fullname,
-				Gender = user.Gender,
-				DateOfBirth = user.DateOfBirth,
-				PhoneNumber = user.PhoneNumber,
-				NationalId = user.NationalId,
-				LoyaltyPoint = 0,
-				Status = "ACTIVE"
-			};
-
-			await _userProfileClient.CreateUserProfileAsync(user.Id, profileDto);
-
-			return new AuthResultDto(true, accessToken, refresh.Token);
-		}
-
-		public async Task<AuthResultDto> LoginAsync(LoginDto dto)
-		{
-			var user = await _userRepo.GetByEmailAsync(dto.Email);
-			if (user == null) return new AuthResultDto(false, Message: "Email hoặc mật khẩu không đúng");
+			if (user == null) return new AuthResultDto(false, Message: "Tài khoản không tồn tại");
 
 			if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-				return new AuthResultDto(false, Message: "Email hoặc mật khẩu không đúng");
+				return new AuthResultDto(false, Message: "Mật khẩu không đúng");
 
 			var accessToken = _tokenService.GenerateAccessToken(user);
 			var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));

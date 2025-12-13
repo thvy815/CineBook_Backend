@@ -20,12 +20,16 @@ namespace AuthService.Application.Client
 
 		public async Task CreateUserProfileAsync(Guid userId, UserProfileCreateDTO dto)
 		{
-			var json = System.Text.Json.JsonSerializer.Serialize(dto);
+            var response = await _httpClient.PostAsJsonAsync($"api/UserProfile/by-user/{userId}", dto);
 
-			var content = new StringContent(json, Encoding.UTF8, "application/json");
-			var response = await _httpClient.PostAsync($"api/UserProfile/by-user/{userId}", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
 
-			response.EnsureSuccessStatusCode(); // throw exception if failed
-		}
+                throw new Exception(
+                    $"UserProfileService error {(int)response.StatusCode}: {errorBody}"
+                );
+            }
+        }
 	}
 }

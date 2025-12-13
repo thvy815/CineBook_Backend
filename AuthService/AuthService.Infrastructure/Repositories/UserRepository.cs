@@ -34,7 +34,21 @@ namespace AuthService.Infrastructure.Repositories
 								  .FirstOrDefaultAsync(u => u.Email == email);
 		}
 
-		public async Task<User> GetByIdAsync(Guid id)
+        public async Task<User> GetByPhoneAsync(string phone)
+        {
+            return await _db.Users.Include(u => u.Role)
+                                  .Include(u => u.RefreshTokens)
+                                  .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+        }
+
+        public async Task<User> GetByUsernameAsync(string username)
+        {
+            return await _db.Users.Include(u => u.Role)
+                                  .Include(u => u.RefreshTokens)
+                                  .FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<User> GetByIdAsync(Guid id)
 		{
 			return await _db.Users.Include(u => u.Role)
 								  .Include(u => u.RefreshTokens)
@@ -51,5 +65,15 @@ namespace AuthService.Infrastructure.Repositories
 		{
 			return await _db.Users.AnyAsync(u => u.Email == email);
 		}
-	}
+
+        public async Task<bool> ExistsByPhone(string phone)
+        {
+            return await _db.Users.AnyAsync(u => u.PhoneNumber == phone);
+        }
+
+        public async Task<bool> ExistsByUsername(string username)
+        {
+            return await _db.Users.AnyAsync(u => u.Username == username);
+        }
+    }
 }

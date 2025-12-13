@@ -8,16 +8,13 @@ namespace AuthService.Domain.DTOs
 		string Username,
 		string Password,
 		string Fullname,
-		string Gender,
-		DateTime DateOfBirth,
-		string PhoneNumber,
-		string NationalId
+		string PhoneNumber
 	);
 
 	// Đăng nhập
 	public record LoginDto(
-		string Email,
-		string Password
+        string Identifier, // username | email | phone
+        string Password
 	);
 
 	// Đổi mật khẩu 
