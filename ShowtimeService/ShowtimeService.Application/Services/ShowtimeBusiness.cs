@@ -197,14 +197,32 @@ namespace ShowtimeService.Application.Services
             if (movieId.HasValue && movieId.Value != Guid.Empty)
                 query = query.Where(s => s.MovieId == movieId.Value);
 
-            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out DateTime parsedDate))
+
+            if (!string.IsNullOrEmpty(date))
             {
-                var start = parsedDate.Date;
-                var end = parsedDate.Date.AddDays(1);
-                query = query.Where(s => s.StartTime >= start && s.StartTime < end);
+                // Định dạng ngày phổ biến
+                string[] formats = new string[]
+                {
+                    "dd/MM/yyyy", "d/M/yyyy",     // 13/12/2025, 1/1/2025
+                    "dd-MM-yyyy", "d-M-yyyy",     // 13-12-2025
+                    "MM/dd/yyyy", "M/d/yyyy",     // 12/13/2025
+                    "MM-dd-yyyy", "M-d-yyyy"      // 12-13-2025
+                        };
+
+                if (DateTime.TryParseExact(date, formats,
+                                           System.Globalization.CultureInfo.InvariantCulture,
+                                           System.Globalization.DateTimeStyles.None,
+                                           out DateTime parsedDate))
+                {
+                    var start = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Utc);
+                    var end = parsedDate.Date.AddDays(1);
+
+                    // Lọc tất cả showtimes có StartTime trong ngày đó
+                    query = query.Where(s => s.StartTime >= start && s.StartTime < end);
+                }
             }
 
-            var showtimes = await query.ToListAsync();
+                var showtimes = await query.ToListAsync();
 
             var movieIds = showtimes.Select(s => s.MovieId).Distinct().ToList();
             List<MovieFromMovieServiceDto> movies;
