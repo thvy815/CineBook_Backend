@@ -260,9 +260,9 @@ namespace ShowtimeService.Application.Services
         }
 
         public async Task<IEnumerable<ShowtimeDto>> FilterShowtimesAsync(
-       Guid? theaterId,
-       Guid? movieId,
-       string date)
+               Guid? theaterId,
+               Guid? movieId,
+               string date)
         {
             var query = _context.Showtimes.AsNoTracking().AsQueryable();
 
