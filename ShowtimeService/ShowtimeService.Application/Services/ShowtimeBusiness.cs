@@ -183,6 +183,92 @@ namespace ShowtimeService.Application.Services
 
             await _context.SaveChangesAsync();
         }
+        private (DateTime startUtc, DateTime endUtc) ParseDate(string date)
+        {
+            string[] formats =
+            {
+        "dd/MM/yyyy", "d/M/yyyy",
+        "dd-MM-yyyy", "d-M-yyyy",
+        "MM/dd/yyyy", "M/d/yyyy",
+        "MM-dd-yyyy", "M-d-yyyy",
+        "yyyy-MM-dd"
+    };
+
+            if (!DateTime.TryParseExact(
+                    date,
+                    formats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsed))
+                throw new ArgumentException("Ngày không hợp lệ");
+
+            var vnZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(parsed.Date, vnZone);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(parsed.Date.AddDays(1), vnZone);
+
+            return (startUtc, endUtc);
+        }
+
+        public async Task<List<TheaterShowtimeDto>> FilterShowtimeAsync(
+            Guid provinceId,
+            Guid movieId,
+            string date,
+            Guid? theaterId = null)
+        {
+            var (startUtc, endUtc) = ParseDate(date);
+
+            // 1. Query showtime + theater
+            var query =
+                from s in _context.Showtimes.AsNoTracking()
+                join t in _context.Theaters on s.TheaterId equals t.Id
+                where
+                    s.MovieId == movieId &&
+                    t.ProvinceId == provinceId &&
+                    s.StartTime >= startUtc &&
+                    s.StartTime < endUtc
+                select new { s, t };
+
+            if (theaterId.HasValue)
+                query = query.Where(x => x.t.Id == theaterId.Value);
+
+            var raw = await query
+                .OrderBy(x => x.s.StartTime)
+                .ToListAsync();
+
+            // 2. Group theo rạp
+            var result = raw
+                .GroupBy(x => new
+                {
+                    x.t.Id,
+                    x.t.Name,
+                    x.t.Address
+                })
+                .Select(g => new TheaterShowtimeDto
+                {
+                    TheaterId = g.Key.Id,
+                    TheaterName = g.Key.Name,
+                    TheaterAddress = g.Key.Address,
+                    Showtimes = g.Select(x => new ShowtimeDto
+                    {
+                        Id = x.s.Id,
+                        MovieId = x.s.MovieId,
+                        TheaterId = x.s.TheaterId,
+                        RoomId = x.s.RoomId,
+
+                        StartTime = x.s.StartTime,
+                        StartTimeFormatted = x.s.StartTime
+                            .ToLocalTime()
+                            .ToString("HH:mm"),
+                        Date = x.s.StartTime
+                            .ToLocalTime()
+                            .ToString("yyyy-MM-dd")
+                    }).ToList()
+                })
+                .ToList();
+
+            return result;
+        }
 
         // Lọc suất chiếu theo theaterId, movieId, date
         public async Task<IEnumerable<ShowtimeDto>> FilterAsync(Guid? theaterId, Guid? movieId, string? date)

@@ -75,17 +75,29 @@ namespace ShowtimeService.API.Controllers
         [FromQuery] Guid? theaterId,
         [FromQuery] Guid? movieId,
         [FromQuery] string date)
+        {
+            try
             {
-                try
-                {
-                    var showtimes = await _business.FilterShowtimesAsync(theaterId, movieId, date);
-                    return Ok(showtimes);
-                }
-                catch (ArgumentException ex)
-                {
-                    return BadRequest(ex.Message);
-                }
+                var showtimes = await _business.FilterShowtimesAsync(theaterId, movieId, date);
+                return Ok(showtimes);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
+        [HttpGet("filterByAll")]
+        public async Task<IActionResult> Filter(
+                Guid provinceId,
+                Guid movieId,
+                string date,
+                Guid? theaterId)
+        {
+            var data = await _business
+                .FilterShowtimeAsync(provinceId, movieId, date, theaterId);
+
+            return Ok(data);
+        }
     }
 }

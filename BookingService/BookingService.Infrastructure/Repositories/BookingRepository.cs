@@ -1,50 +1,29 @@
 ﻿using BookingService.Domain.Entities;
 using BookingService.Domain.Interfaces;
 using BookingService.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;    
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BookingService.Infrastructure.Repositories
+namespace BookingService.Infrastructure.Repositories;
+
+public class BookingRepository : IBookingRepository
 {
-    public class BookingRepository : IBookingRepository
+    private readonly BookingDbContext _db;
+    public BookingRepository(BookingDbContext db) => _db = db;
+
+    public async Task<Guid> CreateAsync(
+        Booking booking,
+        List<BookingSeat> seats,
+        BookingPromotion promotion)
     {
-        private readonly BookingDbContext _context;
+        using var tx = await _db.Database.BeginTransactionAsync();
 
-        public BookingRepository(BookingDbContext context)
-        {
-            _context = context;
-        }
+        _db.Bookings.Add(booking);
+        _db.BookingSeats.AddRange(seats);
+        if (promotion != null)
+            _db.BookingPromotions.Add(promotion);
 
-        public async Task<IEnumerable<Booking>> GetAllAsync()
-            => await _context.Bookings.ToListAsync();
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
 
-        public async Task<Booking?> GetByIdAsync(Guid id)
-            => await _context.Bookings.FindAsync(id);
-
-        public async Task AddAsync(Booking booking)
-        {
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task UpdateAsync(Booking booking)
-        {
-            _context.Bookings.Update(booking);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            var entity = await _context.Bookings.FindAsync(id);
-            if (entity != null)
-            {
-                _context.Bookings.Remove(entity);
-                await _context.SaveChangesAsync();
-            }
-        }
+        return booking.Id;
     }
 }

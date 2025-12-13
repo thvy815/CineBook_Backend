@@ -1,109 +1,90 @@
-﻿using BookingService.Domain.DTOs;
+﻿using BookingService.Application.Clients;
+using BookingService.Application.DTOs;
 using BookingService.Domain.Entities;
 using BookingService.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BookingService.Application.Services
+namespace BookingService.Application.Services;
+
+public class BookingBusiness
 {
-    public class BookingBusiness
+    private readonly ShowtimeSeatClient _seatClient;
+    private readonly PricingClient _pricing;
+    private readonly IBookingRepository _repo;
+
+    public BookingBusiness(
+        ShowtimeSeatClient seatClient,
+        PricingClient pricing,
+        IBookingRepository repo)
     {
-        private readonly IBookingRepository _repository;
+        _seatClient = seatClient;
+        _pricing = pricing;
+        _repo = repo;
+    }
 
-        public BookingBusiness(IBookingRepository repository)
-        {
-            _repository = repository;
-        }
+    public async Task<Guid> CreateBooking(CreateBookingRequest req)
+    {
+        var locked = new List<Guid>();
 
-        public async Task<IEnumerable<BookingDTOs>> GetAllAsync()
+        try
         {
-            var entities = await _repository.GetAllAsync();
-            return entities.Select(e => new BookingDTOs
+            foreach (var s in req.Seats)
             {
-                Id = e.Id,
-                UserId = e.UserId,
-                ShowtimeId = e.ShowtimeId,
-                Status = e.Status,
-                PaymentMethod = e.PaymentMethod,
-                TransactionId = e.TransactionId,
-                TotalPrice = e.TotalPrice,
-                DiscountAmount = e.DiscountAmount,
-                FinalPrice = e.FinalPrice,
-                CreatedAt = e.CreatedAt,
-                UpdatedAt = e.UpdatedAt,
-                Version = e.Version
-            });
-        }
+                var ok = await _seatClient.LockSeat(
+                    req.ShowtimeId, s.SeatId, req.UserId.ToString());
 
-        public async Task<BookingDTOs?> GetByIdAsync(Guid id)
-        {
-            var e = await _repository.GetByIdAsync(id);
-            if (e == null) return null;
+                if (!ok) throw new Exception("Seat locked");
+                locked.Add(s.SeatId);
+            }
 
-            return new BookingDTOs
+            var price = await _pricing.CalculatePrice();
+
+            var booking = new Booking
             {
-                Id = e.Id,
-                UserId = e.UserId,
-                ShowtimeId = e.ShowtimeId,
-                Status = e.Status,
-                PaymentMethod = e.PaymentMethod,
-                TransactionId = e.TransactionId,
-                TotalPrice = e.TotalPrice,
-                DiscountAmount = e.DiscountAmount,
-                FinalPrice = e.FinalPrice,
-                CreatedAt = e.CreatedAt,
-                UpdatedAt = e.UpdatedAt,
-                Version = e.Version
-            };
-        }
-
-        public async Task AddAsync(BookingDTOs dto)
-        {
-            var entity = new Booking
-            {
-                Id = dto.Id,
-                UserId = dto.UserId,
-                ShowtimeId = dto.ShowtimeId,
-                Status = dto.Status,
-                PaymentMethod = dto.PaymentMethod,
-                TransactionId = dto.TransactionId,
-                TotalPrice = dto.TotalPrice,
-                DiscountAmount = dto.DiscountAmount,
-                FinalPrice = dto.FinalPrice,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt,
-                Version = dto.Version
-            };
-            await _repository.AddAsync(entity);
-        }
-
-        public async Task UpdateAsync(BookingDTOs dto)
-        {
-            var entity = new Booking
-            {
-                Id = dto.Id,
-                UserId = dto.UserId,
-                ShowtimeId = dto.ShowtimeId,
-                Status = dto.Status,
-                PaymentMethod = dto.PaymentMethod,
-                TransactionId = dto.TransactionId,
-                TotalPrice = dto.TotalPrice,
-                DiscountAmount = dto.DiscountAmount,
-                FinalPrice = dto.FinalPrice,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt,
-                Version = dto.Version
+                Id = Guid.NewGuid(),
+                UserId = req.UserId,
+                ShowtimeId = req.ShowtimeId,
+                Status = "PENDING",
+                TotalPrice = price.total,
+                DiscountAmount = price.discount,
+                FinalPrice = price.final,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Version = 1
             };
 
-            await _repository.UpdateAsync(entity);
-        }
+            var seats = req.Seats.Select(s => new BookingSeat
+            {
+                Id = Guid.NewGuid(),
+                BookingId = booking.Id,
+                SeatId = s.SeatId,
+                SeatType = s.SeatType,
+                TicketType = s.TicketType,
+                Price = 100000,
+                CreatedAt = DateTime.UtcNow
+            }).ToList();
 
-        public async Task DeleteAsync(Guid id)
+            var promo = string.IsNullOrEmpty(req.PromotionCode)
+                ? null
+                : new BookingPromotion
+                {
+                    Id = Guid.NewGuid(),
+                    BookingId = booking.Id,
+                    PromotionCode = req.PromotionCode,
+                    DiscountType = "PERCENT",
+                    DiscountValue = 10
+                };
+
+            await _repo.CreateAsync(booking, seats, promo);
+            await _seatClient.BookSeats(req.ShowtimeId, locked);
+
+            return booking.Id;
+        }
+        catch
         {
-            await _repository.DeleteAsync(id);
+            foreach (var seat in locked)
+                await _seatClient.ReleaseSeat(
+                    req.ShowtimeId, seat, req.UserId.ToString());
+            throw;
         }
     }
 }
