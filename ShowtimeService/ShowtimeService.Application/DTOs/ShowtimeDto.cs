@@ -1,7 +1,5 @@
 ﻿namespace ShowtimeService.Application.DTOs
 {
-    namespace ShowtimeService.Application.DTOs
-    {
         public class ShowtimeDto
         {
             public Guid Id { get; set; }
@@ -22,7 +20,6 @@
 
             public string Date { get; set; } = ""; // yyyy-MM-dd
         }
-    }
 
 
     public class CreateShowtimeDto

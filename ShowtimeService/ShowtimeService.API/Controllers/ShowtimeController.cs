@@ -87,5 +87,16 @@ namespace ShowtimeService.API.Controllers
                 }
             }
 
+        [HttpGet("filterByAll")]
+        public async Task<IActionResult> Filter(
+                Guid provinceId,
+                Guid movieId,
+                string date)
+        {
+            var data = await _business
+                .FilterShowtimeAsync(provinceId, movieId, date);
+
+            return Ok(data);
+        }
     }
 }
