@@ -11,8 +11,9 @@ namespace AuthService.Infrastructure.Data
 		public DbSet<User> Users { get; set; }
 		public DbSet<RefreshToken> RefreshTokens { get; set; }
 		public DbSet<PasswordResetOtp> PasswordResetOtps { get; set; }
+        public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
 
-		protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
 

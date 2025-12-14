@@ -18,14 +18,33 @@ namespace AuthService.Application.Services
 	{
 		private readonly IConfiguration _config;
 		private readonly AuthDbContext _db;
+        private readonly IEmailVerificationTokenRepository _verifyRepo;
 
-		public TokenService(IConfiguration config, AuthDbContext db)
+        public TokenService(IConfiguration config, AuthDbContext db, IEmailVerificationTokenRepository verifyRepo)
 		{
 			_config = config;
 			_db = db;
-		}
+            _verifyRepo = verifyRepo;
+        }
 
-		public string GenerateAccessToken(User user)
+        public async Task<EmailVerificationToken> GenerateEmailVerifyTokenAsync(User user)
+        {
+            var token = new EmailVerificationToken
+            {
+                Id = Guid.NewGuid(),
+                Token = Convert.ToBase64String(Guid.NewGuid().ToByteArray()),
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                Used = false
+            };
+
+            await _verifyRepo.AddAsync(token);
+            await _verifyRepo.SaveChangesAsync();
+
+            return token;
+        }
+
+        public string GenerateAccessToken(User user)
 		{
 			// load from .env
 			var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");

@@ -22,12 +22,10 @@ namespace AuthService.Application.Services
 		private readonly AuthDbContext _db;
 		private readonly IEmailService _emailService;
 		private readonly IConfiguration _config;
-		private readonly IUserProfileClient _userProfileClient;
 
 		public AuthBusiness(IUserRepository userRepo, IRoleRepository roleRepo,
 							 ITokenService tokenService, AuthDbContext db,
-							 IEmailService emailService, IConfiguration config, 
-							 IUserProfileClient userProfileClient)
+							 IEmailService emailService, IConfiguration config)
 		{
 			_userRepo = userRepo;
 			_roleRepo = roleRepo;
@@ -35,7 +33,6 @@ namespace AuthService.Application.Services
 			_db = db;
 			_emailService = emailService;
 			_config = config;
-			_userProfileClient = userProfileClient;
 		}
 
         public async Task<AuthResultDto> RegisterAsync(RegisterDto dto)
@@ -62,49 +59,21 @@ namespace AuthService.Application.Services
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 RoleId = customerRole?.Id ?? 2,
                 CreatedAt = DateTime.UtcNow,
-                Status = "ACTIVE"
+                Status = "PENDING",
+				EmailVerified = false
             };
 
             await _userRepo.CreateAsync(user);
 
-            try
-            {
-                // generate tokens
-                var accessToken = _tokenService.GenerateAccessToken(user);
-                var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));
+            // Generate verify token
+            var verifyToken = await _tokenService.GenerateEmailVerifyTokenAsync(user);
 
-                var profileDto = new UserProfileCreateDTO
-                {
-                    Email = user.Email,
-                    Username = user.Username,
-                    Fullname = user.Fullname,
-                    PhoneNumber = user.PhoneNumber,
-                    LoyaltyPoint = 0,
-                    Status = "ACTIVE"
-                };
+            await _emailService.SendVerifyEmailAsync(user.Email, verifyToken.Token);
 
-                await _userProfileClient.CreateUserProfileAsync(user.Id, profileDto);
-
-                return new AuthResultDto(true, accessToken, refresh.Token);
-            }
-            catch (Exception ex)
-            {
-                // rollback user nếu profile fail
-                await _userRepo.DeleteAsync(user);
-
-                // log để debug
-                Console.WriteLine($"Create profile failed: {ex.Message}");
-                Console.WriteLine("==== USER PROFILE SERVICE ERROR ====");
-                Console.WriteLine($"UserId: {user.Id}");
-                Console.WriteLine($"Email: {user.Email}");
-                Console.WriteLine(ex.Message);
-                Console.WriteLine("===================================");
-
-                return new AuthResultDto(
-                    false,
-                    Message: "Đăng ký thất bại, vui lòng thử lại sau"
-                );
-            }
+            return new AuthResultDto(
+                true,
+                Message: "Đăng ký thành công, vui lòng kiểm tra email để xác thực"
+            );
         }
 
         public async Task<AuthResultDto> LoginAsync(LoginDto dto)
@@ -133,7 +102,10 @@ namespace AuthService.Application.Services
 
 			if (user == null) return new AuthResultDto(false, Message: "Tài khoản không tồn tại");
 
-			if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            if (user.Status != "ACTIVE")
+                return new AuthResultDto(false, Message: "Tài khoản chưa được kích hoạt");
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
 				return new AuthResultDto(false, Message: "Mật khẩu không đúng");
 
 			var accessToken = _tokenService.GenerateAccessToken(user);
@@ -183,7 +155,7 @@ namespace AuthService.Application.Services
 			return true;
 		}
 
-		public async Task<bool> SendPasswordResetOtpAsync(string email)
+        public async Task<bool> SendPasswordResetOtpAsync(string email)
 		{
 			var user = await _userRepo.GetByEmailAsync(email);
 			if (user == null) return false;

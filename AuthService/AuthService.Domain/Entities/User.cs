@@ -53,14 +53,18 @@ namespace AuthService.Domain.Entities
 
 		[MaxLength(20)]
 		[Column("status")]
-		public string Status { get; set; } = "ACTIVE"; // ACTIVE, BANNED
+		public string Status { get; set; } = "PENDING"; // PENDING, ACTIVE, BANNED
 
-		[Column("created_at")]
+        [Column("email_verified")]
+        public bool EmailVerified { get; set; } = false;
+
+        [Column("created_at")]
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 		[Column("updated_at")]
 		public DateTime? UpdatedAt { get; set; }
 
 		public ICollection<RefreshToken> RefreshTokens { get; set; }
-	}
+        public ICollection<EmailVerificationToken> EmailVerificationTokens { get; set; }
+    }
 }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using AuthService.Application.Client;
+using AuthService.Domain.Entities;
 
 // Load variables from .env
 Env.Load();
@@ -40,12 +41,19 @@ builder.Services.AddDbContext<AuthDbContext>(opt =>
 		?? builder.Configuration.GetConnectionString("DefaultConnection")
 	));
 
+// Configure Email Settings
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings")
+);
+
 // Dependency Injection
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthBusiness>();
+builder.Services.AddScoped<IEmailVerificationTokenRepository, EmailVerificationTokenRepository>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
 builder.Services.AddHttpClient<IUserProfileClient, UserProfileClient>(client =>
 {

@@ -13,17 +13,45 @@ namespace AuthService.API.Controllers
 	public class AuthController : ControllerBase
 	{
 		private readonly IAuthService _auth;
-		public AuthController(IAuthService auth) { _auth = auth; }
+        private readonly IEmailVerificationService _service;
+
+        public AuthController(IAuthService auth, IEmailVerificationService service) 
+		{ 
+			_auth = auth; 
+			_service = service; 
+		}
 
 		[HttpPost("register")]
 		public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 		{
 			var res = await _auth.RegisterAsync(dto);
 			if (!res.Success) return BadRequest(new { message = res.Message });
-			return Ok(new { accessToken = res.AccessToken, refreshToken = res.RefreshToken });
+			return Ok(new { message = "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản." });
 		}
 
-		[HttpPost("login")]
+        // Verify email
+        [HttpGet("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        {
+            var res = await _service.VerifyEmailAsync(token);
+            if (!res.Success)
+                return BadRequest(new { message = res.Message });
+
+            return Ok(new { message = res.Message });
+        }
+
+        // Resend verify email
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> Resend([FromBody] ResendVerificationEmailDto dto)
+        {
+            var res = await _service.ResendVerificationEmailAsync(dto.Email);
+            if (!res.Success)
+                return BadRequest(new { message = res.Message });
+
+            return Ok(new { message = res.Message });
+        }
+
+        [HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginDto dto)
 		{
 			var res = await _auth.LoginAsync(dto);
