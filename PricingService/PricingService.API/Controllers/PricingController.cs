@@ -18,3 +18,4 @@ public class PricingController : ControllerBase
         return Ok(result);
     }
 }
+

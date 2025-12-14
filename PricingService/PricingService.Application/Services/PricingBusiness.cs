@@ -13,7 +13,8 @@ public class PricingBusiness
     {
         decimal seatTotal = 0;
         decimal fnbTotal = 0;
-
+        decimal[] seatPrice = new decimal[req.Seats.Count];
+        int i = 0;
         // 1️⃣ Tính tiền ghế
         foreach (var seat in req.Seats)
         {
@@ -25,6 +26,8 @@ public class PricingBusiness
                 throw new Exception($"Seat price not found: {seat.SeatType}-{seat.TicketType}");
 
             seatTotal += price.BasePrice * seat.Quantity;
+            seatPrice[i] = price.BasePrice;
+            i++;
         }
 
         // 2️⃣ Tính FnB
@@ -43,13 +46,15 @@ public class PricingBusiness
         // 3️⃣ Promotion
         decimal discount = 0;
         PromotionDetailDto? promoDetail = null;
-        if (req.Promotion != null)
+
+        if (!string.IsNullOrEmpty(req.PromotionCode))
         {
             var promo = await _db.Promotions.FirstOrDefaultAsync(p =>
-                p.Code == req.Promotion.Code &&
+                p.Code == req.PromotionCode &&
                 p.IsActive &&
                 p.StartDate <= DateTime.UtcNow &&
-                p.EndDate >= DateTime.UtcNow);
+                p.EndDate >= DateTime.UtcNow
+            );
 
             if (promo != null)
             {
@@ -57,21 +62,24 @@ public class PricingBusiness
                     ? subTotal * promo.DiscountValue / 100
                     : promo.DiscountValue;
 
+                // Tạo PromotionDetailDto để trả về
                 promoDetail = new PromotionDetailDto(
-                    promo.Code,
-                    promo.DiscountType,
-                    promo.DiscountValue,
-                    promo.StartDate,
-                    promo.EndDate,
-                    promo.IsActive,
-                    promo.IsOneTimeUse,
-                    promo.Description
-                );
+                        promo.Code,
+                        promo.DiscountType,
+                        promo.DiscountValue,
+                        discount,                // giá trị thực tế đã áp dụng
+                        promo.StartDate,
+                        promo.EndDate,
+                        promo.IsActive,
+                        promo.IsOneTimeUse,
+                        promo.Description
+                    );
+
             }
         }
 
         return new CalculatePriceResponse(
-            seatTotal,
+            seatPrice,
             fnbTotal,
             subTotal,
             discount,
