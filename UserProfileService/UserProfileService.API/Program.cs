@@ -1,4 +1,4 @@
-using DotNetEnv;
+﻿using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using UserProfileService.Application.Services;
 using UserProfileService.Domain.Interfaces;
@@ -9,6 +9,19 @@ using UserProfileService.Infrastructure.Data;
 Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Cấu hình CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") // frontend URL
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // nếu dùng cookie hoặc Authorization
+        });
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -44,6 +57,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseHttpsRedirection();
 app.MapControllers();

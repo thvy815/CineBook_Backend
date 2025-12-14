@@ -42,8 +42,26 @@ namespace UserProfileService.API.Controllers
 			return Ok(updated);
 		}
 
-		// Favorites
-		[HttpGet("{userId}/favorites")]
+        [HttpPut("{userId}/avatar")]
+        public async Task<IActionResult> UpdateAvatar(Guid userId, [FromBody] UpdateAvatarDto dto)
+        {
+            try
+            {
+                var res = await _business.UpdateAvatarAsync(userId, dto.AvatarUrl);
+                return Ok(res);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
+
+        // Favorites
+        [HttpGet("{userId}/favorites")]
 		public async Task<IActionResult> GetFavorites(Guid userId)
 		{
 			var profile = await _business.CreateIfNotExistsAsync(userId);

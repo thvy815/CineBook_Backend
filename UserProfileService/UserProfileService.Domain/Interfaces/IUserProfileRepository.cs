@@ -14,8 +14,8 @@ namespace UserProfileService.Domain.Interfaces
 		Task<UserProfile> AddAsync(UserProfile profile);
 		Task<UserProfile> UpdateAsync(UserProfile profile);
 
-		// Favorites (use user_profile_id internally)
-		Task<IEnumerable<UserFavoriteMovie>> GetFavoritesByUserProfileIdAsync(Guid userProfileId);
+        // Favorites (use user_profile_id internally)
+        Task<IEnumerable<UserFavoriteMovie>> GetFavoritesByUserProfileIdAsync(Guid userProfileId);
 		Task<UserFavoriteMovie> GetFavoriteByProfileAndTmdbAsync(Guid userProfileId, int tmdbId);
 		Task AddFavoriteAsync(UserFavoriteMovie favorite);
 		Task RemoveFavoriteAsync(UserFavoriteMovie favorite);

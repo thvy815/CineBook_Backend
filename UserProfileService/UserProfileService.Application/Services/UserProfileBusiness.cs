@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,20 +30,19 @@ namespace UserProfileService.Application.Services
 			var p = await _repo.GetByUserIdAsync(userId);
 			if (p == null) return null;
 
-			p.Email = update.Email ?? p.Email;
-			p.Username = update.Username ?? p.Username;
-			p.Fullname = update.Fullname ?? p.Fullname;
-			p.AvatarUrl = update.AvatarUrl ?? p.AvatarUrl;
-			p.Gender = update.Gender ?? p.Gender;
-			if (update.DateOfBirth != default(DateTime))
-				p.DateOfBirth = update.DateOfBirth;
-			p.PhoneNumber = update.PhoneNumber ?? p.PhoneNumber;
-			p.NationalId = update.NationalId ?? p.NationalId;
-			p.Address = update.Address ?? p.Address;
-			p.Status = update.Status ?? p.Status;
-			p.UpdatedAt = DateTime.UtcNow;
+            p.Email = update.Email;
+            p.Username = update.Username;
+            p.Fullname = update.Fullname;
+            p.AvatarUrl = update.AvatarUrl;
+            p.Gender = update.Gender;
+            p.DateOfBirth = update.DateOfBirth;   
+            p.PhoneNumber = update.PhoneNumber;
+            p.NationalId = update.NationalId;
+            p.Address = update.Address;
+            p.Status = update.Status;
+            p.UpdatedAt = DateTime.UtcNow;
 
-			var updated = await _repo.UpdateAsync(p);
+            var updated = await _repo.UpdateAsync(p);
 			return MapToReadDto(updated);
 		}
 
@@ -62,7 +62,7 @@ namespace UserProfileService.Application.Services
 					Fullname = dto?.Fullname,
 					AvatarUrl = dto?.AvatarUrl,
 					Gender = dto?.Gender,
-					DateOfBirth = dto?.DateOfBirth ?? DateTime.MinValue,
+					DateOfBirth = dto?.DateOfBirth,
 					PhoneNumber = dto?.PhoneNumber,
 					NationalId = dto?.NationalId,
 					Address = dto?.Address,
@@ -92,8 +92,27 @@ namespace UserProfileService.Application.Services
 			return MapToReadDto(entity);
 		}
 
-		// Cập nhật LoyaltyPoint và Rank tự động
-		public async Task<UserProfileReadDTO> AddLoyaltyPointsAsync(Guid userId, int points)
+        public async Task<UserProfileReadDTO> UpdateAvatarAsync(Guid userId, string avatarUrl)
+        {
+            if (string.IsNullOrWhiteSpace(avatarUrl))
+                throw new ArgumentException("Avatar URL không được để trống");
+
+            if (!Uri.IsWellFormedUriString(avatarUrl, UriKind.Absolute))
+                throw new ArgumentException("Avatar URL không hợp lệ");
+
+            var profile = await _repo.GetByUserIdAsync(userId);
+            if (profile == null)
+                throw new KeyNotFoundException("Không tìm thấy user profile");
+
+            profile.AvatarUrl = avatarUrl;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            var updated = await _repo.UpdateAsync(profile);
+            return MapToReadDto(updated);
+        }
+
+        // Cập nhật LoyaltyPoint và Rank tự động
+        public async Task<UserProfileReadDTO> AddLoyaltyPointsAsync(Guid userId, int points)
 		{
 			var profile = await _repo.GetByUserIdAsync(userId);
 			if (profile == null) return null;
