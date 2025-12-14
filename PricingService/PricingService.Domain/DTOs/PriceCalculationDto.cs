@@ -1,7 +1,7 @@
 ﻿public record CalculatePriceRequest(
     List<SeatRequest> Seats,
     List<FnbRequest> Fnbs,
-    PromotionDetailDto? Promotion
+    String? PromotionCode
 );
 
 public record SeatRequest(
@@ -18,7 +18,7 @@ public record FnbRequest(
 );
 
 public record CalculatePriceResponse(
-    decimal SeatTotal,
+    decimal[] SeatPrice,
     decimal FnbTotal,
     decimal SubTotal,
     decimal Discount,
@@ -31,6 +31,7 @@ public record PromotionDetailDto(
     string Code,
     string DiscountType,
     decimal DiscountValue,
+    decimal DiscountAmount,
     DateTime StartDate,
     DateTime EndDate,
     bool IsActive,

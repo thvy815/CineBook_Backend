@@ -52,6 +52,7 @@ public class BookingBusiness
                 {
                     SeatType = g.Key.SeatType,
                     TicketType = g.Key.TicketType,
+                    Quantity = g.Sum(x => x.Quantity),
                 }).ToList(),
 
             Fnbs = req.FnBs.Select(f => new PricingFnbDto
@@ -61,6 +62,8 @@ public class BookingBusiness
                 UnitPrice = 0,    // PricingService sẽ trả
                 Quantity = f.Quantity
             }).ToList(),
+
+            PromotionCode = req.PromotionCode
         };
         
         var price = await _pricing.CalculateAsync(pricingRequest);
@@ -84,15 +87,14 @@ public class BookingBusiness
             Version = 1
         };
 
-        // 4️⃣ Lưu booking seat
-        var seats = req.Seats.Select(s => new BookingSeat
+        var seats = req.Seats.Select((s, i) => new BookingSeat
         {
             Id = Guid.NewGuid(),
             BookingId = booking.Id,
             SeatId = s.ShowtimeSeatId,
             SeatType = s.SeatType,
             TicketType = s.TicketType,
-            Price = price.SeatTotal / req.Seats.Count, // gán giá trung bình cho mỗi ghế
+            Price = price.SeatPrice[i], // gán giá riêng cho từng ghế
             CreatedAt = DateTime.UtcNow
         }).ToList();
 
@@ -122,7 +124,15 @@ public class BookingBusiness
         }
 
         // 7️⃣ Lưu vào repository
-        await _repo.CreateAsync(booking, seats, promo, fnbs);
+        try
+        {
+            await _repo.CreateAsync(booking, seats, promo, fnbs);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("CreateAsync failed: " + ex.Message);
+            throw;
+        }
 
         return (booking.Id, lockedSeats);
     }

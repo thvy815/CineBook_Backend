@@ -17,4 +17,19 @@ public class PricingController : ControllerBase
         var result = await _business.CalculateAsync(req);
         return Ok(result);
     }
+
+    [HttpGet("fnb-items")]
+    public async Task<IActionResult> GetFnbItems()
+    {
+        var items = await _business.GetAllFnbItemsAsync();
+        return Ok(items);
+    }
+
+    [HttpGet("seat-prices")]
+    public async Task<IActionResult> GetSeatPrices()
+    {
+        var prices = await _business.GetAllSeatPricesAsync();
+        return Ok(prices);
+    }
 }
+

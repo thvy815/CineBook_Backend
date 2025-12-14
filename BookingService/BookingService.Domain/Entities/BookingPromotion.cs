@@ -7,4 +7,5 @@ public class BookingPromotion
     public string PromotionCode { get; set; }
     public string DiscountType { get; set; }
     public decimal DiscountValue { get; set; }
+
 }
