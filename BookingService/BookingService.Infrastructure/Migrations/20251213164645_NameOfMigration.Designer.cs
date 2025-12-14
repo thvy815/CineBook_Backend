@@ -3,6 +3,7 @@ using System;
 using BookingService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BookingService.Infrastructure.Migrations
 {
     [DbContext(typeof(BookingDbContext))]
-    partial class BookingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251213164645_NameOfMigration")]
+    partial class NameOfMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,35 +72,6 @@ namespace BookingService.Infrastructure.Migrations
                     b.ToTable("Bookings");
                 });
 
-            modelBuilder.Entity("BookingService.Domain.Entities.BookingFnb", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BookingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FnbItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("TotalFnbPrice")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookingId")
-                        .IsUnique();
-
-                    b.ToTable("BookingFnB");
-                });
-
             modelBuilder.Entity("BookingService.Domain.Entities.BookingPromotion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -119,9 +93,6 @@ namespace BookingService.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("BookingId")
-                        .IsUnique();
 
                     b.ToTable("BookingPromotions");
                 });
@@ -154,47 +125,7 @@ namespace BookingService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
-
                     b.ToTable("BookingSeats");
-                });
-
-            modelBuilder.Entity("BookingService.Domain.Entities.BookingFnb", b =>
-                {
-                    b.HasOne("BookingService.Domain.Entities.Booking", null)
-                        .WithOne("BookingFnb")
-                        .HasForeignKey("BookingService.Domain.Entities.BookingFnb", "BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("BookingService.Domain.Entities.BookingPromotion", b =>
-                {
-                    b.HasOne("BookingService.Domain.Entities.Booking", null)
-                        .WithOne("Promotion")
-                        .HasForeignKey("BookingService.Domain.Entities.BookingPromotion", "BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("BookingService.Domain.Entities.BookingSeat", b =>
-                {
-                    b.HasOne("BookingService.Domain.Entities.Booking", null)
-                        .WithMany("Seats")
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("BookingService.Domain.Entities.Booking", b =>
-                {
-                    b.Navigation("BookingFnb")
-                        .IsRequired();
-
-                    b.Navigation("Promotion")
-                        .IsRequired();
-
-                    b.Navigation("Seats");
                 });
 #pragma warning restore 612, 618
         }

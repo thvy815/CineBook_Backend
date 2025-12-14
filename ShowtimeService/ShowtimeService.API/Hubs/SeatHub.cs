@@ -15,7 +15,7 @@ namespace ShowtimeService.API.Hubs
         // Client invokes: connection.invoke("LockSeat", showtimeId, seatNumber, userId)
         public async Task LockSeat(Guid showtimeId, Guid seatId, string userId)
         {
-            var locked = await _lockService.TryLockSeatDb(showtimeId, seatId, userId);
+            var locked = await _lockService.TryLockSeatDb(showtimeId, seatId);
 
             // Broadcast only to group (showtime). Use Groups if you join groups.
             await Clients.Group(showtimeId.ToString()).SendAsync("SeatUpdated", new
@@ -29,7 +29,7 @@ namespace ShowtimeService.API.Hubs
 
         public async Task ReleaseSeat(Guid showtimeId, Guid seatId, string userId)
         {
-            var released = await _lockService.ReleaseSeatDb(showtimeId, seatId, userId);
+            var released = await _lockService.ReleaseSeatDb(showtimeId, seatId);
 
             if (released)
             {

@@ -13,14 +13,13 @@ namespace ShowtimeService.API.HubNotifiers
             _hub = hub;
         }
 
-        public async Task NotifySeatUpdated(Guid showtimeId, string seatNumber, bool locked, string user)
+        public async Task NotifySeatUpdated(Guid showtimeId, string seatNumber, bool locked)
         {
-            await _hub.Clients.All.SendAsync("SeatUpdated", new
+            await _hub.Clients.Group(showtimeId.ToString()).SendAsync("SeatUpdated", new
             {
                 showtimeId,
                 seat = seatNumber,
-                locked,
-                user
+                locked
             });
         }
     }

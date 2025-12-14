@@ -1,18 +1,22 @@
 ﻿using BookingService.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BookingService.Domain.Interfaces
+namespace BookingService.Domain.Interfaces;
+
+public interface IBookingRepository
 {
-    public interface IBookingRepository
-    {
-        Task<IEnumerable<Booking>> GetAllAsync();
-        Task<Booking?> GetByIdAsync(Guid id);
-        Task AddAsync(Booking booking);
-        Task UpdateAsync(Booking booking);
-        Task DeleteAsync(Guid id);
-    }
+    /// <summary>
+    /// Tạo booking + seats + promotion
+    /// </summary>
+    Task<Guid> CreateAsync(Booking booking, List<BookingSeat> seats, BookingPromotion promotion, List<BookingFnb> bookingFnb);
+
+    /// <summary>
+    /// Cập nhật trạng thái booking + transactionId + paymentMethod
+    /// </summary>
+    Task UpdateStatusAsync(Guid bookingId, string status, string transactionId, string paymentMethod);
+
+    /// <summary>
+    /// Lấy booking theo Id (kèm seats + promotion)
+    /// </summary>
+    Task<Booking> GetByIdAsync(Guid bookingId);
+    Task<List<Booking>> GetPendingBookingsAsync();
 }

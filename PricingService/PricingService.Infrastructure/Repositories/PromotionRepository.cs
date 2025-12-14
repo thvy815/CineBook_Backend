@@ -4,9 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PricingService.Domain.Entities;
 using PricingService.Domain.Interfaces;
-using PricingService.Infrastructure.Data;
+
 
 namespace PricingService.Infrastructure.Repositories
 {

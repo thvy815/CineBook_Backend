@@ -1,7 +1,8 @@
-﻿using ShowtimeService.Application.DTOs;
+﻿using Microsoft.EntityFrameworkCore;
+using ShowtimeService.Application.DTOs;
+using ShowtimeService.Application.Interfaces;
 using ShowtimeService.Domain.Entities;
 using ShowtimeService.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
 namespace ShowtimeService.Application.Services
@@ -9,14 +10,22 @@ namespace ShowtimeService.Application.Services
     public class ShowtimeSeatService
     {
         private readonly ShowtimeDbContext _context;
-        private readonly IDatabase _db;
-        public ShowtimeSeatService(ShowtimeDbContext context, IConnectionMultiplexer redis)
+        private readonly ISeatHubNotifier _notifier;
+        private readonly IDatabase _redisDb;
+        private readonly TimeSpan _lockTimeout = TimeSpan.FromMinutes(5); // ghế bị unlock sau 5 phút
+
+        public ShowtimeSeatService(
+            ShowtimeDbContext context,
+            ISeatHubNotifier notifier,
+            IConnectionMultiplexer redis)
         {
             _context = context;
-            _db = redis.GetDatabase(); // Đây là bước thiếu
+            _notifier = notifier;
+            _redisDb = redis.GetDatabase();
         }
 
-            public async Task<IEnumerable<ShowtimeSeatDto>> GetByShowtimeAsync(Guid showtimeId)
+        // Lấy danh sách ghế theo showtime
+        public async Task<IEnumerable<ShowtimeSeatDto>> GetByShowtimeAsync(Guid showtimeId)
         {
             return await _context.ShowtimeSeats
                 .Where(s => s.ShowtimeId == showtimeId)
@@ -26,41 +35,62 @@ namespace ShowtimeService.Application.Services
                     ShowtimeId = s.ShowtimeId,
                     SeatId = s.SeatId,
                     Status = s.Status,
+                    SeatType = s.Seat.Type,
                     UpdatedAt = s.UpdatedAt
                 }).ToListAsync();
         }
 
-        public async Task<ShowtimeSeatDto> CreateAsync(CreateShowtimeSeatDto dto)
+        public async Task<int> CreateShowtimeSeatsAsync(Guid showtimeId, int seatCount)
         {
-            var entity = new ShowtimeSeat
-            {
-                Id = Guid.NewGuid(),
-                ShowtimeId = dto.ShowtimeId,
-                SeatId = dto.SeatId,
-                Status = dto.Status,
-                UpdatedAt = DateTime.SpecifyKind(dto.UpdatedAt, DateTimeKind.Utc)
-            };
-            _context.ShowtimeSeats.Add(entity);
-            await _context.SaveChangesAsync();
-            return new ShowtimeSeatDto
-            {
-                Id = entity.Id,
-                ShowtimeId = entity.ShowtimeId,
-                SeatId = entity.SeatId,
-                Status = entity.Status,
-                UpdatedAt = entity.UpdatedAt
-            };
-        }
+            if (seatCount <= 0)
+                throw new Exception("Seat count must be greater than 0");
 
-        // 🔹 Tạo tất cả ghế cho một suất chiếu theo room
-        public async Task<IEnumerable<ShowtimeSeatDto>> CreateSeatsForShowtimeAsync(Guid showtimeId, Guid roomId)
-        {
-            // Lấy tất cả ghế của room
-            var seats = await _context.Seats
-                .Where(s => s.RoomId == roomId)
-                .ToListAsync();
+            // 1. Lấy showtime
+            var showtime = await _context.Showtimes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == showtimeId);
 
-            var showtimeSeats = seats.Select(s => new ShowtimeSeat
+            if (showtime == null)
+                throw new Exception("Showtime not found");
+
+            // 2. Check đã tạo ShowtimeSeat chưa
+            bool existed = await _context.ShowtimeSeats
+                .AnyAsync(s => s.ShowtimeId == showtimeId);
+
+            if (existed)
+                throw new Exception("Showtime seats already created");
+
+            var roomId = showtime.RoomId;
+
+            // 3. Tạo seat mới theo số lượng nhập
+            var newSeats = new List<Seat>();
+            int seatsPerRow = 10; // số ghế tối đa mỗi row
+            int rowIndex = 0;
+            for (int i = 0; i < seatCount; i++)
+            {
+                if (i % seatsPerRow == 0 && i != 0) rowIndex++;
+
+                char rowLabelChar = (char)('A' + rowIndex);
+                string rowLabel = rowLabelChar.ToString();
+                int columnIndex = (i % seatsPerRow) + 1;
+
+                var seat = new Seat
+                {
+                    Id = Guid.NewGuid(),
+                    RoomId = roomId,
+                    RowLabel = rowLabel,
+                    ColumnIndex = columnIndex,
+                    SeatNumber = $"{rowLabel}{columnIndex}",
+                    Type = "Normal" // có thể truyền thêm nếu muốn
+                };
+
+                newSeats.Add(seat);
+            }
+
+            await _context.Seats.AddRangeAsync(newSeats);
+
+            // 4. Tạo ShowtimeSeat tương ứng
+            var showtimeSeats = newSeats.Select(s => new ShowtimeSeat
             {
                 Id = Guid.NewGuid(),
                 ShowtimeId = showtimeId,
@@ -69,73 +99,125 @@ namespace ShowtimeService.Application.Services
                 UpdatedAt = DateTime.UtcNow
             }).ToList();
 
-            _context.ShowtimeSeats.AddRange(showtimeSeats);
+            await _context.ShowtimeSeats.AddRangeAsync(showtimeSeats);
             await _context.SaveChangesAsync();
 
-            return showtimeSeats.Select(s => new ShowtimeSeatDto
-            {
-                Id = s.Id,
-                ShowtimeId = s.ShowtimeId,
-                SeatId = s.SeatId,
-                Status = s.Status,
-                UpdatedAt = s.UpdatedAt
-            });
+            return showtimeSeats.Count;
         }
 
-        public async Task<bool> TryLockSeatDb(Guid showtimeId, Guid showtimeSeatId, string userId)
-        {
-            var seat = await _context.ShowtimeSeats
-                .FirstOrDefaultAsync(s => s.ShowtimeId == showtimeId && s.Id == showtimeSeatId);
 
-            // Nếu đã có và đang Available → block
-            if (seat.Status == "Available")
+
+        // Lock ghế
+        public async Task<bool> TryLockSeatDb(Guid showtimeId, Guid seatId)
+        {
+            // 1️⃣ Dùng atomic DB update để chống race condition
+            var updated = await _context.ShowtimeSeats
+                .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Available")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.Status, "Blocked")
+                    .SetProperty(x => x.UpdatedAt, DateTime.UtcNow)
+                );
+
+            if (updated == 0)
+                return false; // Ghế đã bị lock hoặc booked
+
+            // 2️⃣ Set Redis key để auto unlock
+            string redisKey = $"seat:{showtimeId}:{seatId}";
+            try
             {
-                seat.Status = "Blocked";
-                seat.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                return true;
+                bool redisSet = await _redisDb.StringSetAsync(redisKey, "locked", _lockTimeout, when: StackExchange.Redis.When.NotExists);
+                if (!redisSet)
+                {
+                    // Redis đã có key → rollback DB
+                    await _context.ShowtimeSeats
+                        .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Blocked")
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Available"));
+
+                    return false;
+                }
+            }
+            catch
+            {
+                // Nếu Redis throw lỗi, rollback DB
+                await _context.ShowtimeSeats
+                    .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Blocked")
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Available"));
+
+                throw; // Rethrow exception để tầng trên biết
             }
 
-            // Nếu đang Blocked/Booked → không cho block
-            return false;
-        }
+            // 3️⃣ Notify client qua SignalR
+            await _notifier.NotifySeatUpdated(showtimeId, seatId.ToString(), true);
 
-        public async Task<bool> ReleaseSeatDb(Guid showtimeId, Guid showtimeSeatId, string userId)
-        {
-            var seat = await _context.ShowtimeSeats
-                .FirstOrDefaultAsync(s => s.ShowtimeId == showtimeId && s.Id == showtimeSeatId);
-
-            if (seat != null && seat.Status == "Blocked")
-            {
-                seat.Status = "Available";
-                seat.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                return true;
-            }
-
-            return false;
-        }
-
-
-        public async Task<List<Guid>> GetLockedSeatsDb(Guid showtimeId)
-        {
-            return await _context.ShowtimeSeats
-                .Where(s => s.ShowtimeId == showtimeId && s.Status == "Blocked")
-                .Select(s => s.SeatId)
-                .ToListAsync();
-        }
-
-        public async Task<bool> BookSeatDb(Guid showtimeId, Guid showtimeSeatId)
-        {
-            var seat = await _context.ShowtimeSeats
-                .FirstOrDefaultAsync(s => s.ShowtimeId == showtimeId && s.Id == showtimeSeatId);
-
-            if (seat == null) return false;
-
-            seat.Status = "Booked";
-            seat.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> ReleaseSeatDb(Guid showtimeId, Guid seatId)
+        {
+            // Atomic update: chỉ release nếu ghế đang Blocked
+            var updated = await _context.ShowtimeSeats
+                .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Blocked")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.Status, "Available")
+                    .SetProperty(x => x.UpdatedAt, DateTime.UtcNow)
+                );
+
+            if (updated == 0)
+                return false; // Ghế không bị blocked hoặc đã booked
+
+            // Xóa Redis key nếu còn
+            string redisKey = $"seat:{showtimeId}:{seatId}";
+            await _redisDb.KeyDeleteAsync(redisKey);
+
+            // Notify client qua SignalR
+            await _notifier.NotifySeatUpdated(showtimeId, seatId.ToString(), false);
+
+            return true;
+        }
+
+        public async Task<bool> BookSeatDb(Guid showtimeId, Guid seatId)
+        {
+            // Atomic update: chỉ book nếu ghế đang Blocked
+            var updated = await _context.ShowtimeSeats
+                .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Blocked")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.Status, "Booked")
+                    .SetProperty(x => x.UpdatedAt, DateTime.UtcNow)
+                );
+
+            if (updated == 0)
+                return false; // Ghế không bị blocked, có thể đã release hoặc book rồi
+
+            // Xóa Redis key nếu còn
+            string redisKey = $"seat:{showtimeId}:{seatId}";
+            await _redisDb.KeyDeleteAsync(redisKey);
+
+            // Notify client qua SignalR
+            await _notifier.NotifySeatUpdated(showtimeId, seatId.ToString(), false);
+
+            return true;
+        }
+        public async Task HandleSeatTimeout(string redisKey)
+        {
+            // redisKey format: seat:{showtimeId}:{seatId}
+            var parts = redisKey.Split(':');
+            if (parts.Length != 3) return;
+
+            if (!Guid.TryParse(parts[1], out Guid showtimeId)) return;
+            if (!Guid.TryParse(parts[2], out Guid seatId)) return;
+
+            // Atomic update: chỉ release nếu ghế vẫn Blocked
+            var updated = await _context.ShowtimeSeats
+                .Where(s => s.ShowtimeId == showtimeId && s.Id == seatId && s.Status == "Blocked")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.Status, "Available")
+                    .SetProperty(x => x.UpdatedAt, DateTime.UtcNow)
+                );
+
+            if (updated == 0) return; // Ghế đã bị book hoặc release rồi
+
+            // Notify client để UI cập nhật ghế
+            await _notifier.NotifySeatUpdated(showtimeId, seatId.ToString(), false);
         }
 
 

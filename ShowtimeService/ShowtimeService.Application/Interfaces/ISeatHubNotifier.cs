@@ -2,6 +2,6 @@
 {
     public interface ISeatHubNotifier
     {
-        Task NotifySeatUpdated(Guid showtimeId, string seatNumber, bool locked, string userId);
+        Task NotifySeatUpdated(Guid showtimeId, string seatNumber, bool locked);
     }
 }

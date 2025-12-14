@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ShowtimeService.Application.DTOs;
 using ShowtimeService.Application.Services;
-using System.Collections.Immutable;
 
 namespace ShowtimeService.API.Controllers
 {
@@ -12,60 +11,74 @@ namespace ShowtimeService.API.Controllers
         private readonly ShowtimeSeatService _service;
         public ShowtimeSeatController(ShowtimeSeatService service) => _service = service;
 
-        [HttpGet("{showtimeId}")]
-        public async Task<IActionResult> GetByShowtime(Guid showtimeId)
-            => Ok(await _service.GetByShowtimeAsync(showtimeId));
-
-        [HttpPost]
-        public async Task<IActionResult> Create(CreateShowtimeSeatDto dto)
-            => Ok(await _service.CreateAsync(dto));
-
-        [HttpPost("create-for-room")]
-        public async Task<IActionResult> CreateForRoom([FromQuery] Guid showtimeId, [FromQuery] Guid roomId)
+        #region DTOs
+        public class LockSeatRequest
         {
-            var seats = await _service.CreateSeatsForShowtimeAsync(showtimeId, roomId);
+            public Guid ShowtimeId { get; set; }
+            public Guid SeatId { get; set; }
+        }
+
+        public class BookSeatsRequest
+        {
+            public Guid ShowtimeId { get; set; }
+            public List<Guid> SeatIds { get; set; } = new();
+        }
+
+        public class GenerateSeatsRequest
+        {
+            public Guid ShowtimeId { get; set; }
+            public int SeatCount { get; set; }
+        }
+        #endregion
+
+        // Lấy danh sách ghế theo showtime
+        [HttpGet("{showtimeId}")]
+        public async Task<IActionResult> GetByShowtime([FromRoute] Guid showtimeId)
+        {
+            var seats = await _service.GetByShowtimeAsync(showtimeId);
             return Ok(seats);
         }
 
-        [HttpPost("{seatId}/lock")]
-        public async Task<ActionResult> LockSeat(Guid showtimeId, Guid seatId, [FromQuery] string userId)
+        // Lock ghế tạm thời
+        [HttpPost("lock")]
+        public async Task<ActionResult> LockSeat([FromBody] LockSeatRequest request)
         {
-            var success = await _service.TryLockSeatDb(showtimeId, seatId, userId);
+            var success = await _service.TryLockSeatDb(request.ShowtimeId, request.SeatId);
             if (!success) return BadRequest("Seat is already blocked or booked.");
-            return Ok();
+            return Ok(new { message = "Seat locked successfully" });
         }
 
-        // POST: api/showtimes/{showtimeId}/seats/{seatId}/release
-        [HttpPost("{seatId}/release")]
-        public async Task<ActionResult> ReleaseSeat(Guid showtimeId, Guid seatId, string userId)
+        // Release ghế (hủy lock)
+        [HttpPost("release")]
+        public async Task<ActionResult> ReleaseSeat([FromBody] LockSeatRequest request)
         {
-            var success = await _service.ReleaseSeatDb(showtimeId, seatId, userId);
-            if (!success) return BadRequest("Seat is not blocked.");
-            return Ok();
+            var success = await _service.ReleaseSeatDb(request.ShowtimeId, request.SeatId);
+            if (!success) return BadRequest("Seat is not blocked or already booked.");
+            return Ok(new { message = "Seat released successfully" });
         }
 
-        // GET: api/showtimes/{showtimeId}/seats/locked
-        [HttpGet("locked")]
-        public async Task<ActionResult<IEnumerable<Guid>>> GetLockedSeats(Guid showtimeId)
-        {
-            var lockedSeats = await _service.GetLockedSeatsDb(showtimeId);
-            return Ok(lockedSeats);
-        }
-
-        // POST: api/showtimes/{showtimeId}/seats/book
+        // Book ghế (thanh toán thành công)
         [HttpPost("book")]
-        public async Task<ActionResult> BookSeats(Guid showtimeId, [FromBody] List<Guid> seatIds)
+        public async Task<ActionResult> BookSeats([FromBody] BookSeatsRequest request)
         {
-            foreach (var seatId in seatIds)
+            foreach (var seatId in request.SeatIds)
             {
-                var locked = await _service.TryLockSeatDb(showtimeId, seatId, "system"); // "system" hoặc userId
-                if (!locked) return BadRequest($"Seat {seatId} cannot be booked.");
-
-                // Set trạng thái thực sự là Booked
-                await _service.BookSeatDb(showtimeId, seatId);
+                var booked = await _service.BookSeatDb(request.ShowtimeId, seatId);
+                if (!booked) return BadRequest($"Seat {seatId} cannot be booked (already released or booked).");
             }
+            return Ok(new { message = "Seats booked successfully" });
+        }
 
-            return Ok();
+        // Tạo ghế cho showtime
+        [HttpPost("generate")]
+        public async Task<IActionResult> GenerateShowtimeSeats([FromBody] GenerateSeatsRequest request)
+        {
+            var count = await _service.CreateShowtimeSeatsAsync(request.ShowtimeId, request.SeatCount);
+            return Ok(new
+            {
+                message = "Showtime seats created successfully",
+                totalSeats = count
+            });
         }
     }
 }

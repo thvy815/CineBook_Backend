@@ -51,7 +51,7 @@ public class RedisExpirationSubscriber : BackgroundService
                 if (!Guid.TryParse(parts[1], out var showtimeId)) continue;
 
                 var seatNumber = parts[3];
-                await notifier.NotifySeatUpdated(showtimeId, seatNumber, false, "");
+                await notifier.NotifySeatUpdated(showtimeId, seatNumber, false);
                 await _db.KeyDeleteAsync(key);
             }
         }

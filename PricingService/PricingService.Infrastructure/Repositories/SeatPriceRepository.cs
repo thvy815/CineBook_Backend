@@ -1,6 +1,4 @@
-﻿using PricingService.Domain.Entities;
-using PricingService.Domain.Interfaces;
-using PricingService.Infrastructure.Data;
+﻿using PricingService.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

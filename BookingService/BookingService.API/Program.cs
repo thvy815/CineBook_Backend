@@ -4,6 +4,8 @@ using BookingService.Infrastructure.Data;
 using BookingService.Infrastructure.Repositories;
 using BookingService.Application.Services;
 using DotNetEnv;
+using BookingService.Application.Clients;
+using BookingService.Application.Services.Payment;
 
 // Load variables from .env
 Env.Load();
@@ -23,19 +25,38 @@ builder.Services.AddDbContext<BookingDbContext>(opt =>
     )
 );
 
+builder.Services.AddHttpClient<ShowtimeSeatClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7156"); // ShowtimeService
+});
+
 // Dependency Injection - Register all Repositories
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
-builder.Services.AddScoped<IBookingFnbRepository, BookingFnbRepository>();
+//builder.Services.AddScoped<IBookingFnbRepository, BookingFnbRepository>();
 builder.Services.AddScoped<IBookingPromotionRepository, BookingPromotionRepository>();
 builder.Services.AddScoped<IBookingSeatRepository, BookingSeatRepository>();
-builder.Services.AddScoped<IUsedPromotionRepository, UsedPromotionRepository>();
+//builder.Services.AddScoped<IUsedPromotionRepository, UsedPromotionRepository>();
+builder.Services.AddScoped<IPaymentService, MockPaymentService>();
+builder.Services.AddHostedService<BookingExpirationService>();
+
 
 // Dependency Injection - Register all Business Services
 builder.Services.AddScoped<BookingBusiness>();
-builder.Services.AddScoped<BookingFnbBusiness>();
-builder.Services.AddScoped<BookingPromotionBusiness>();
-builder.Services.AddScoped<BookingSeatBusiness>();
-builder.Services.AddScoped<UsedPromotionBusiness>();
+
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json",
+        optional: true)
+    .AddEnvironmentVariables();
+
+builder.Services.AddHttpClient<PricingClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["Services:Pricing"]);
+});
+
+
 
 var app = builder.Build();
 

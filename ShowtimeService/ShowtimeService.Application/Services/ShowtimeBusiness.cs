@@ -147,12 +147,10 @@ namespace ShowtimeService.Application.Services
 
             var today = DateTime.Today;
 
-            var timeSlots = new[]
-            {
-                new TimeSpan(10, 0, 0),
-                new TimeSpan(14, 0, 0),
-                new TimeSpan(19, 0, 0)
-            };
+            var random = new Random();
+
+            const int startHour = 7;
+            const int endHour = 22;
 
             foreach (var movie in movies)
             {
@@ -160,26 +158,35 @@ namespace ShowtimeService.Application.Services
                 {
                     var date = today.AddDays(d);
 
-                    foreach (var slot in timeSlots)
+                    // Random giờ bắt đầu (đảm bảo đủ thời lượng phim)
+                    int maxStartHour = endHour - (int)Math.Ceiling(movie.Duration / 60.0);
+                    if (maxStartHour < startHour)
+                        continue; // phim quá dài, bỏ qua
+
+                    int hour = random.Next(startHour, maxStartHour + 1);
+                    int minute = random.Next(0, 60);
+
+                    var startTime = date.AddHours(hour).AddMinutes(minute);
+                    var endTime = startTime.AddMinutes(movie.Duration);
+
+                    // Chắc chắn không vượt quá 22:00
+                    if (endTime.Hour >= endHour && endTime.Minute > 0)
+                        continue;
+
+                    var showtime = new Showtime
                     {
-                        var startTime = date.Add(slot);
-                        var endTime = startTime.AddMinutes(movie.Duration);
-                        var showtime = new Showtime
-                        {
-                            RoomId = roomId,
-                            TheaterId = theaterId,
-                            StartTime = startTime.ToUniversalTime(),
-                            EndTime = endTime.ToUniversalTime(),
-                            MovieId = movie.Id
-                        };
+                        RoomId = roomId,
+                        TheaterId = theaterId,
+                        MovieId = movie.Id,
+                        StartTime = startTime.ToUniversalTime(),
+                        EndTime = endTime.ToUniversalTime()
+                    };
 
-                        await _context.Showtimes.AddAsync(showtime);
-                        await _context.SaveChangesAsync();
-
-                    }
+                    await _context.Showtimes.AddAsync(showtime);
                 }
             }
 
+            // Save 1 lần cho hiệu năng tốt hơn
             await _context.SaveChangesAsync();
         }
 
