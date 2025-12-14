@@ -116,7 +116,77 @@ namespace AuthService.Application.Services
             return new AuthResultDto(true, accessToken, refresh.Token, User: userDto);
 		}
 
-		public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken)
+        public async Task<PagedResponse<UserListResponse>> GetUsersAsync(
+        string? keyword, string? status, string? role,
+        int page, int size, string? sortBy, string? sortType)
+        {
+            // Default sorting
+            var allowedSort = new List<string> { "CreatedAt", "Username", "Email", "Status" };
+            var sortField = !string.IsNullOrWhiteSpace(sortBy) && allowedSort.Contains(sortBy)
+                ? sortBy
+                : "CreatedAt";
+
+            var direction = (!string.IsNullOrWhiteSpace(sortType) && sortType.Equals("ASC", StringComparison.OrdinalIgnoreCase))
+                ? true : false; // true = ascending, false = descending
+
+            var query = _db.Users
+                .Include(u => u.Role)
+                .AsQueryable();
+
+            // Keyword search
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var kw = keyword.Trim().ToLower();
+                query = query.Where(u =>
+                    u.Username.ToLower().Contains(kw) ||
+                    u.Email.ToLower().Contains(kw) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(kw))
+                );
+            }
+
+            // Role filter
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                var roleNormalized = role.Trim().ToLower();
+                query = query.Where(u => u.Role != null && u.Role.Name.ToLower() == roleNormalized);
+            }
+
+            // Status filter
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var statusNormalized = status.Trim().ToLower();
+                query = query.Where(u => u.Status.ToLower() == statusNormalized);
+            }
+
+            // Sorting
+            query = sortField switch
+            {
+                "Username" => direction ? query.OrderBy(u => u.Username) : query.OrderByDescending(u => u.Username),
+                "Email" => direction ? query.OrderBy(u => u.Email) : query.OrderByDescending(u => u.Email),
+                "Status" => direction ? query.OrderBy(u => u.Status) : query.OrderByDescending(u => u.Status),
+                _ => direction ? query.OrderBy(u => u.CreatedAt) : query.OrderByDescending(u => u.CreatedAt)
+            };
+
+            // Paging
+            var totalElements = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalElements / size);
+            var skip = (page - 1) * size;
+
+            var data = await query.Skip(skip)
+                                  .Take(size)
+                                  .ToListAsync();
+
+            return new PagedResponse<UserListResponse>
+            {
+                Data = data.Select(UserListResponse.FromEntity).ToList(),
+                Page = page,
+                Size = size,
+                TotalElements = totalElements,
+                TotalPages = totalPages
+            };
+        }
+
+        public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken)
 		{
 			var existing = await _db.RefreshTokens.Include(r => r.User).FirstOrDefaultAsync(r => r.Token == refreshToken);
 			if (existing == null || existing.ExpiresAt < DateTime.UtcNow)

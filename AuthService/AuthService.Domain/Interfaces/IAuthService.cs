@@ -16,5 +16,8 @@ namespace AuthService.Domain.Interfaces
 		Task<bool> SendPasswordResetOtpAsync(string email);
 		Task<bool> VerifyOtpAndResetPasswordAsync(ResetPasswordDto dto);
 		Task<bool> DeleteAccountAsync(Guid userId);
-	}
+        Task<PagedResponse<UserListResponse>> GetUsersAsync(
+        string? keyword, string? status, string? role,
+        int page, int size, string? sortBy, string? sortType);
+    }
 }

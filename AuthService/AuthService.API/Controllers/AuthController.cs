@@ -77,7 +77,25 @@ namespace AuthService.API.Controllers
 			return Ok(new { message = "Đổi mật khẩu thành công" });
 		}
 
-		[HttpPost("forgot-password")]
+        [HttpGet("users")]
+        public async Task<ActionResult<PagedResponse<UserListResponse>>> GetAllUsers(
+        [FromQuery] string? keyword,
+        [FromQuery] string? status,
+        [FromQuery] string? role,
+        [FromQuery] int page = 1,
+        [FromQuery] int size = 10,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortType = null)
+        {
+            // TODO: Replace with your own admin check
+            //if (!User.IsInRole("Admin"))
+            //    return Forbid();
+
+            var users = await _auth.GetUsersAsync(keyword, status, role, page, size, sortBy, sortType);
+            return Ok(users);
+        }
+
+        [HttpPost("forgot-password")]
 		public async Task<IActionResult> ForgotPassword([FromBody] string email)
 		{
 			var ok = await _auth.SendPasswordResetOtpAsync(email);

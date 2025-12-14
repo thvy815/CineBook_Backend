@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using MovieService.Domain.Entities;
 using MovieService.Infrastructure.Data;
-using System.Net.Http;
 using System.Text.Json;
 
 namespace MovieService.Application.Services
@@ -17,18 +16,22 @@ namespace MovieService.Application.Services
         {
             _http = http;
             _db = db;
-            _apiKey = config["TMDB_API_KEY"] ?? Environment.GetEnvironmentVariable("TMDB_API_KEY")
+            _apiKey = config["TMDB_API_KEY"]
+                      ?? Environment.GetEnvironmentVariable("TMDB_API_KEY")
                       ?? throw new InvalidOperationException("TMDB_API_KEY is missing.");
         }
 
-        // 🎬 Gọi TMDB API để lấy phim theo category (now_playing / upcoming)
-        private async Task<int> SyncMoviesByCategoryAsync(string category, int totalPages = 2)
+        // =========================================
+        // 🔥 SYNC TRENDING (NowPlaying / Upcoming)
+        // =========================================
+        public async Task SyncNowPlayingAndUpcomingAsync(int pages = 3)
         {
-            int imported = 0;
-
-            for (int page = 1; page <= totalPages; page++)
+            for (int page = 1; page <= pages; page++)
             {
-                var url = $"https://api.themoviedb.org/3/movie/{category}?api_key={_apiKey}&language=en-US&page={page}";
+                var url =
+                    $"https://api.themoviedb.org/3/trending/movie/week" +
+                    $"?api_key={_apiKey}&language=vi-VN&page={page}";
+
                 var response = await _http.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
@@ -40,30 +43,47 @@ namespace MovieService.Application.Services
                 {
                     int tmdbId = movieJson.GetProperty("id").GetInt32();
 
-                    // Nếu đã tồn tại thì chỉ update status
-                    var existing = await _db.MovieDetails.FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
+                    var detail = await GetFromTmdbAsync(tmdbId);
+                    if (detail == null) continue;
+
+                    var existing = await _db.MovieDetails
+                        .FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
+
                     if (existing != null)
                     {
-                        existing.Status = category == "now_playing" ? "Now Playing" : "Upcoming";
-                        continue;
+                        existing.Title = detail.Title;
+                        existing.ReleaseDate = detail.ReleaseDate;
+                        existing.Overview = detail.Overview;
+                        existing.PosterUrl = detail.PosterUrl;
+                        existing.Country = detail.Country;
+                        existing.SpokenLanguages = detail.SpokenLanguages;
+                        existing.Genres = detail.Genres;
+                        existing.Crew = detail.Crew;
+                        existing.Cast = detail.Cast;
+                        existing.Trailer = detail.Trailer;
+                        existing.Time = detail.Time;
+                        existing.Age = detail.Age;
+                        existing.Status = detail.Status;
                     }
-
-                    // Gọi chi tiết để lấy thông tin và age
-                    var detail = await GetFromTmdbAsync(tmdbId);
-                    detail.Status = category == "now_playing" ? "Now Playing" : "Upcoming";
-                    imported++;
+                    else
+                    {
+                        _db.MovieDetails.Add(detail);
+                    }
                 }
 
                 await _db.SaveChangesAsync();
             }
-
-            return imported;
         }
 
-        // 🎬 Lấy chi tiết 1 phim và lưu vào DB
-        public async Task<MovieDetail> GetFromTmdbAsync(int tmdbId)
+        // =========================================
+        // 🎬 GET MOVIE DETAIL (FULL + AGE)
+        // =========================================
+        public async Task<MovieDetail?> GetFromTmdbAsync(int tmdbId)
         {
-            var movieUrl = $"https://api.themoviedb.org/3/movie/{tmdbId}?api_key={_apiKey}&append_to_response=videos,credits";
+            var movieUrl =
+                $"https://api.themoviedb.org/3/movie/{tmdbId}" +
+                $"?api_key={_apiKey}&language=vi-VN&append_to_response=videos,credits";
+
             var response = await _http.GetAsync(movieUrl);
             response.EnsureSuccessStatusCode();
 
@@ -71,143 +91,167 @@ namespace MovieService.Application.Services
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
-            // Lấy certification (rating)
-            var ratingUrl = $"https://api.themoviedb.org/3/movie/{tmdbId}/release_dates?api_key={_apiKey}";
+            // ---------- basic ----------
+            var title = root.GetProperty("title").GetString() ?? "";
+            var overview = root.GetProperty("overview").GetString() ?? "";
+
+            var releaseDateStr = root.TryGetProperty("release_date", out var rd)
+                ? rd.GetString()
+                : "";
+
+            DateTime? releaseDate = null;
+            if (DateTime.TryParse(releaseDateStr, out var parsed))
+                releaseDate = parsed;
+
+            // ---------- STATUS ----------
+            string status =
+                releaseDate.HasValue && releaseDate.Value.Date > DateTime.UtcNow.Date
+                    ? "Upcoming"
+                    : "NowPlaying";
+
+            // ---------- poster ----------
+            var posterUrl = root.TryGetProperty("poster_path", out var path)
+                ? $"https://image.tmdb.org/t/p/w500{path.GetString()}"
+                : "";
+
+            // ---------- spoken languages ----------
+            string spokenLanguages = "";
+            if (root.TryGetProperty("spoken_languages", out var langs))
+            {
+                spokenLanguages = string.Join(", ",
+                    langs.EnumerateArray()
+                        .Select(l => l.GetProperty("english_name").GetString()));
+            }
+
+            // ---------- genres ----------
+            string genres = "";
+            if (root.TryGetProperty("genres", out var genreArr))
+            {
+                genres = string.Join(", ",
+                    genreArr.EnumerateArray()
+                        .Select(g => g.GetProperty("name").GetString()));
+            }
+
+            // ---------- cast & crew ----------
+            string cast = "", crew = "";
+            if (root.TryGetProperty("credits", out var credits))
+            {
+                if (credits.TryGetProperty("cast", out var castArr))
+                {
+                    cast = string.Join(", ",
+                        castArr.EnumerateArray()
+                            .Take(5)
+                            .Select(c => c.GetProperty("name").GetString()));
+                }
+
+                if (credits.TryGetProperty("crew", out var crewArr))
+                {
+                    var director = crewArr.EnumerateArray()
+                        .FirstOrDefault(c =>
+                            c.TryGetProperty("job", out var job) &&
+                            job.GetString() == "Director");
+
+                    if (director.ValueKind != JsonValueKind.Undefined)
+                        crew = director.GetProperty("name").GetString() ?? "";
+                }
+            }
+
+            // ---------- trailer ----------
+            string trailer = "";
+            if (root.TryGetProperty("videos", out var videos) &&
+                videos.TryGetProperty("results", out var vids))
+            {
+                var trailerObj = vids.EnumerateArray()
+                    .FirstOrDefault(v =>
+                        v.GetProperty("type").GetString() == "Trailer" &&
+                        v.GetProperty("site").GetString() == "YouTube");
+
+                if (trailerObj.ValueKind != JsonValueKind.Undefined)
+                {
+                    trailer =
+                        $"https://www.youtube.com/watch?v={trailerObj.GetProperty("key").GetString()}";
+                }
+            }
+
+            // ---------- runtime ----------
+            int runtime = root.TryGetProperty("runtime", out var rt) && rt.ValueKind == JsonValueKind.Number
+                ? rt.GetInt32()
+                : 0;
+
+            // ---------- AGE / CERTIFICATION ----------
+            var ratingUrl =
+                $"https://api.themoviedb.org/3/movie/{tmdbId}/release_dates?api_key={_apiKey}";
+
             var ratingResponse = await _http.GetAsync(ratingUrl);
             ratingResponse.EnsureSuccessStatusCode();
 
             var ratingJson = await ratingResponse.Content.ReadAsStringAsync();
             using var ratingDoc = JsonDocument.Parse(ratingJson);
             var ratingRoot = ratingDoc.RootElement;
-
             string? certification = null;
-            foreach (var country in ratingRoot.GetProperty("results").EnumerateArray())
+
+            // 1️⃣ Ưu tiên US
+            certification = GetCertificationByCountry(ratingRoot, "US");
+
+            // 2️⃣ Nếu không có → thử VN
+            if (string.IsNullOrWhiteSpace(certification))
             {
-                if (country.GetProperty("iso_3166_1").GetString() == "US")
+                certification = GetCertificationByCountry(ratingRoot, "VN");
+            }
+
+            // 3️⃣ Nếu vẫn không có → lấy cái đầu tiên không rỗng
+            if (string.IsNullOrWhiteSpace(certification))
+            {
+                foreach (var country in ratingRoot.GetProperty("results").EnumerateArray())
                 {
-                    var releases = country.GetProperty("release_dates").EnumerateArray();
-                    if (releases.Any())
+                    if (!country.TryGetProperty("release_dates", out var releases))
+                        continue;
+
+                    foreach (var r in releases.EnumerateArray())
                     {
-                        certification = releases.First().GetProperty("certification").GetString();
-                        break;
+                        var cert = r.GetProperty("certification").GetString();
+                        if (!string.IsNullOrWhiteSpace(cert))
+                        {
+                            certification = cert;
+                            break;
+                        }
                     }
+
+                    if (!string.IsNullOrWhiteSpace(certification))
+                        break;
                 }
             }
 
-            // spoken_languages
-            string spokenLanguages = root.TryGetProperty("spoken_languages", out var langs)
-                ? string.Join(", ", langs.EnumerateArray().Select(l => l.GetProperty("english_name").GetString()))
-                : "";
+            // 4️⃣ Map sang tuổi
+            int age = ConvertRatingToAge(certification) ?? GuessAgeByGenres(genres);
 
-            // genres
-            string genres = root.TryGetProperty("genres", out var genreArr)
-                ? string.Join(", ", genreArr.EnumerateArray().Select(g => g.GetProperty("name").GetString()))
-                : "";
 
-            // credits (cast + crew)
-            string cast = "", crew = "";
-            if (root.TryGetProperty("credits", out var credits))
-            {
-                if (credits.TryGetProperty("cast", out var castArr))
-                    cast = string.Join(", ", castArr.EnumerateArray().Take(5).Select(c => c.GetProperty("name").GetString()));
-
-                if (credits.TryGetProperty("crew", out var crewArr))
-                {
-                    var director = crewArr.EnumerateArray().FirstOrDefault(c =>
-                        c.TryGetProperty("job", out var job) && job.GetString() == "Director");
-                    if (director.ValueKind != JsonValueKind.Undefined)
-                        crew = director.GetProperty("name").GetString() ?? "";
-                }
-            }
-
-            // videos (trailer)
-            string trailer = "";
-            if (root.TryGetProperty("videos", out var videos) && videos.TryGetProperty("results", out var vids))
-            {
-                var trailerObj = vids.EnumerateArray().FirstOrDefault(v =>
-                    v.TryGetProperty("type", out var type) && type.GetString() == "Trailer" &&
-                    v.TryGetProperty("site", out var site) && site.GetString() == "YouTube");
-                if (trailerObj.ValueKind != JsonValueKind.Undefined)
-                    trailer = $"https://www.youtube.com/watch?v={trailerObj.GetProperty("key").GetString()}";
-            }
-
-            // runtime
-            int? runtime = root.TryGetProperty("runtime", out var rt) && rt.ValueKind == JsonValueKind.Number ? rt.GetInt32() : null;
-
-            // Xóa bản cũ nếu có
-            var existing = await _db.MovieDetails.FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
-            if (existing != null)
-            {
-                _db.MovieDetails.Remove(existing);
-                await _db.SaveChangesAsync();
-            }
-
-            // Tạo phim mới
-            var movie = new MovieDetail
+            // ---------- CREATE ----------
+            return new MovieDetail
             {
                 TmdbId = tmdbId,
-                Title = root.GetProperty("title").GetString() ?? "",
-                ReleaseDate = root.TryGetProperty("release_date", out var date) ? date.GetString() ?? "" : "",
-                Overview = root.TryGetProperty("overview", out var overview) ? overview.GetString() ?? "" : "",
-                PosterUrl = root.TryGetProperty("poster_path", out var path) ? $"https://image.tmdb.org/t/p/w500{path.GetString()}" : "",
-                Country = root.TryGetProperty("original_language", out var lang) ? lang.GetString() ?? "" : "",
+                Title = title,
+                ReleaseDate = releaseDateStr ?? "",
+                Overview = overview,
+                PosterUrl = posterUrl,
+                Country = "VN",
                 SpokenLanguages = spokenLanguages,
                 Genres = genres,
                 Crew = crew,
                 Cast = cast,
                 Trailer = trailer,
-                Time = runtime ?? 0,
-                Age = ConvertRatingToAge(certification) ?? 0
+                Time = runtime,
+                Age = age,
+                Status = status
             };
-
-            _db.MovieDetails.Add(movie);
-            await _db.SaveChangesAsync();
-
-            return movie;
         }
 
-
-
-        // 🌍 Hàm gọi đồng bộ toàn bộ (đang & sắp chiếu)
-        public async Task SyncNowPlayingAndUpcomingAsync()
-        {
-            var baseUrl = "https://api.themoviedb.org/3/movie";
-            var urls = new Dictionary<string, string>
-    {
-        { "Now Playing", $"{baseUrl}/now_playing?api_key={_apiKey}&language=en-US&page=1" },
-        { "Upcoming", $"{baseUrl}/upcoming?api_key={_apiKey}&language=en-US&page=1" }
-    };
-
-            foreach (var (status, url) in urls)
-            {
-                var response = await _http.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var results = doc.RootElement.GetProperty("results");
-
-                int count = 0;
-                foreach (var movie in results.EnumerateArray().Take(40))
-                {
-                    int tmdbId = movie.GetProperty("id").GetInt32();
-                    var detail = await GetFromTmdbAsync(tmdbId);
-                    detail.Status = status;
-                    _db.MovieDetails.Update(detail);
-                    await _db.SaveChangesAsync();
-
-                    count++;
-                    Console.WriteLine($"✅ Synced {count}/40 {status}: {detail.Title}");
-                }
-            }
-        }
-
-
-
-        // 🔢 Chuyển rating → độ tuổi
+        // =========================================
+        // 🔢 RATING → AGE
+        // =========================================
         private int? ConvertRatingToAge(string? rating)
         {
-            if (string.IsNullOrEmpty(rating))
+            if (string.IsNullOrWhiteSpace(rating))
                 return null;
 
             return rating.ToUpper() switch
@@ -217,8 +261,46 @@ namespace MovieService.Application.Services
                 "PG-13" => 13,
                 "R" => 17,
                 "NC-17" => 18,
+
+                "P" => 0,
+                "C13" => 13,
+                "C16" => 16,
+                "C18" => 18,
+
                 _ => null
             };
         }
+        private string? GetCertificationByCountry(JsonElement ratingRoot, string countryCode)
+        {
+            foreach (var country in ratingRoot.GetProperty("results").EnumerateArray())
+            {
+                if (country.GetProperty("iso_3166_1").GetString() != countryCode)
+                    continue;
+
+                if (!country.TryGetProperty("release_dates", out var releases))
+                    continue;
+
+                foreach (var r in releases.EnumerateArray())
+                {
+                    var cert = r.GetProperty("certification").GetString();
+                    if (!string.IsNullOrWhiteSpace(cert))
+                        return cert;
+                }
+            }
+            return null;
+        }
+
+        private int GuessAgeByGenres(string genres)
+        {
+            if (genres.Contains("Horror", StringComparison.OrdinalIgnoreCase))
+                return 18;
+            if (genres.Contains("Action", StringComparison.OrdinalIgnoreCase))
+                return 16;
+            if (genres.Contains("Thriller", StringComparison.OrdinalIgnoreCase))
+                return 16;
+
+            return 13; // default an toàn
+        }
+
     }
 }

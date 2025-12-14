@@ -93,5 +93,24 @@ namespace MovieService.API.Controllers
 
             return Ok(results);
         }
+
+        // 🎯 Admin search / advanced search
+        [HttpGet("advanced-search")]
+        public async Task<IActionResult> AdvancedSearch(
+            [FromQuery] string? keyword,
+            [FromQuery] string? status,
+            [FromQuery] string? genres,
+            [FromQuery] int page = 1,
+            [FromQuery] int size = 10,
+            [FromQuery] string? sortBy = null,
+            [FromQuery] string? sortType = null)
+        {
+            // TODO: check role admin/manager
+            //if (!User.IsInRole("Admin") && !User.IsInRole("Manager"))
+            //    return Forbid();
+
+            var result = await _service.AdminSearchAsync(keyword, status, genres, page, size, sortBy, sortType);
+            return Ok(result);
+        }
     }
 }
