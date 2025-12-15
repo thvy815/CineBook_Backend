@@ -14,7 +14,7 @@ public class BookingController : ControllerBase
     public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequest req)
     {
         var result = await _business.CreateBookingPending(req);
-        return Ok(result);
+        return Ok(new { bookingId = req.BookingId });
     }
 
     [HttpGet("{bookingId}")]

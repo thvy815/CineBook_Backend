@@ -31,5 +31,14 @@ public class PricingController : ControllerBase
         var prices = await _business.GetAllSeatPricesAsync();
         return Ok(prices);
     }
+
+    [HttpGet("promotions")]
+    public async Task<IActionResult> GetActivePromotions()
+    {
+        var items = await _business.GetActivePromotions();
+        return Ok(items);
+    }
+
+
 }
 

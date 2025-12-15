@@ -35,12 +35,11 @@ public class BookingBusiness
         var pricingRequest = new PricingCalculateRequest
         {
             Seats = req.Seats
-                .GroupBy(s => new { s.SeatType, s.TicketType })
                 .Select(g => new PricingSeatDto
                 {
-                    SeatType = g.Key.SeatType,
-                    TicketType = g.Key.TicketType,
-                    Quantity = g.Sum(x => x.Quantity),
+                    SeatType = g.SeatType,
+                    TicketType = g.TicketType,
+                    Quantity = 1,
                 }).ToList(),
 
             Fnbs = req.FnBs.Select(f => new PricingFnbDto
@@ -74,6 +73,7 @@ public class BookingBusiness
             UpdatedAt = DateTime.UtcNow,
             Version = 1
         };
+        req.BookingId = booking.Id;
 
         var seats = req.Seats.Select((s, i) => new BookingSeat
         {

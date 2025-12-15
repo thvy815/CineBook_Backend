@@ -1,5 +1,6 @@
 ﻿public class CreateBookingRequest
 {
+    public Guid BookingId { get; set; }
     public Guid UserId { get; set; }
     public Guid ShowtimeId { get; set; }
 
