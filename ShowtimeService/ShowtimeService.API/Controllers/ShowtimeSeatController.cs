@@ -73,7 +73,7 @@ namespace ShowtimeService.API.Controllers
         [HttpPost("generate")]
         public async Task<IActionResult> GenerateShowtimeSeats([FromBody] GenerateSeatsRequest request)
         {
-            var count = await _service.CreateShowtimeSeatsAsync(request.ShowtimeId, request.SeatCount);
+            var count = await _service.CreateShowtimeSeatsAsync(request.ShowtimeId);
             return Ok(new
             {
                 message = "Showtime seats created successfully",

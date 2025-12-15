@@ -19,4 +19,7 @@ public interface IBookingRepository
     /// </summary>
     Task<Booking> GetByIdAsync(Guid bookingId);
     Task<List<Booking>> GetPendingBookingsAsync();
+
+    Task<Booking?> GetByTransactionIdAsync(string transactionId);
+
 }
