@@ -53,4 +53,13 @@ namespace AuthService.Domain.DTOs
         public string Status { get; set; } = null!;
     }
 
+    public class AdminCreateUserDto
+    {
+        public string Email { get; set; } = null!;
+        public string Username { get; set; } = null!;
+        public string Password { get; set; } = null!;
+        public string Role { get; set; } = "Customer";
+        public string Status { get; set; } = "ACTIVE";
+    }
+
 }

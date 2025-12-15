@@ -23,6 +23,7 @@ namespace AuthService.Application.Services
 		private readonly IEmailService _emailService;
 		private readonly IConfiguration _config;
 
+
 		public AuthBusiness(IUserRepository userRepo, IRoleRepository roleRepo,
 							 ITokenService tokenService, AuthDbContext db,
 							 IEmailService emailService, IConfiguration config)
@@ -304,5 +305,40 @@ namespace AuthService.Application.Services
 			await _userRepo.DeleteAsync(user);
 			return true;
 		}
-	}
+
+        public async Task<bool> AdminCreateUserAsync(AdminCreateUserDto dto)
+        {
+            if (await _db.Users.AnyAsync(u => u.Email == dto.Email))
+                return false;
+
+            if (await _db.Users.AnyAsync(u => u.Username == dto.Username))
+                return false;
+
+            var role = await _db.Roles.FirstOrDefaultAsync(r => r.Name == dto.Role);
+            if (role == null)
+                return false;
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = dto.Email,
+                Username = dto.Username,
+                Fullname = dto.Username,
+                PhoneNumber = "",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                RoleId = role.Id,
+                Status = dto.Status,
+                EmailVerified = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+
+            return true;
+        }
+
+
+    }
 }

@@ -136,6 +136,19 @@ namespace AuthService.API.Controllers
 			return Ok(new { message = "Tài khoản đã được xóa" });
 		}
 
+        [Authorize(Roles = "Admin")]
+        [HttpPost("users")]
+        public async Task<IActionResult> AdminCreateUser(
+    [FromBody] AdminCreateUserDto dto)
+        {
+            var ok = await _auth.AdminCreateUserAsync(dto);
 
-	}
+            if (!ok)
+                return BadRequest(new { message = "Tạo tài khoản thất bại (email, username hoặc role không hợp lệ)" });
+
+            return Ok(new { message = "Tạo tài khoản thành công" });
+        }
+
+
+    }
 }

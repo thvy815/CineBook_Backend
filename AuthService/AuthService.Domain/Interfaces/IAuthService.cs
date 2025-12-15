@@ -22,6 +22,7 @@ namespace AuthService.Domain.Interfaces
         Task<bool> UpdateUserRoleStatusAsync(
     Guid userId,
     UpdateUserRoleStatusDto dto);
+        Task<bool> AdminCreateUserAsync(AdminCreateUserDto dto);
 
     }
 }

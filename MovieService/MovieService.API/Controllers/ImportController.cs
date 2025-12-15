@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using MovieService.Application.Services;
 
 namespace MovieService.API.Controllers
@@ -49,6 +50,7 @@ namespace MovieService.API.Controllers
         }
 
         //Đồng bộ phim đang chiếu và sắp chiếu (40)
+        [Authorize(Roles = "Admin")]
         [HttpPost("sync-all")]
         public async Task<IActionResult> SyncAllMovies()
         {
