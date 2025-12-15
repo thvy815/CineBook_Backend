@@ -20,7 +20,7 @@ namespace MovieService.API.Controllers
         public async Task<IActionResult> GetNowPlaying()
         {
             var movies = await _db.MovieDetails
-                .Where(m => m.Status == "Now Playing")
+                .Where(m => m.Status == "NowPlaying")
                 .OrderByDescending(m => m.ReleaseDate)
                 .Take(40)
                 .ToListAsync();

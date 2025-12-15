@@ -64,7 +64,6 @@ namespace MovieService.Application.Services
                 .Where(m => ids.Contains(m.Id))
                 .ToListAsync();
         }
-    }
 
         public async Task<PagedResponse<MovieDetail>> AdminSearchAsync(
         string? keyword,
