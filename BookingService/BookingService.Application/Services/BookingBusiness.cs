@@ -1,109 +1,174 @@
-﻿using BookingService.Domain.DTOs;
+﻿using BookingService.Application.Clients;
 using BookingService.Domain.Entities;
 using BookingService.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net;
 
-namespace BookingService.Application.Services
+namespace BookingService.Application.Services;
+
+public class BookingBusiness
 {
-    public class BookingBusiness
+    private readonly ShowtimeSeatClient _seatClient;
+    private readonly PricingClient _pricing;
+    private readonly IBookingRepository _repo;
+
+    public BookingBusiness(
+        ShowtimeSeatClient seatClient,
+        PricingClient pricing,
+        IBookingRepository repo)
     {
-        private readonly IBookingRepository _repository;
+        _seatClient = seatClient;
+        _pricing = pricing;
+        _repo = repo;
+    }
 
-        public BookingBusiness(IBookingRepository repository)
+    /// <summary>
+    /// 1️⃣ Tạo booking PENDING + lock ghế
+    /// </summary>
+    public async Task<(Guid bookingId, List<Guid> lockedSeats)> CreateBookingPending(CreateBookingRequest req)
+    {
+        var lockedSeats = new List<Guid>();
+
+        // Lock tất cả ghế trước
+        foreach (var s in req.Seats)
         {
-            _repository = repository;
+            var ok = await _seatClient.LockSeat(req.ShowtimeId, s.ShowtimeSeatId);
+            if (!ok)
+            {
+                // Rollback tất cả ghế đã lock
+                foreach (var locked in lockedSeats)
+                    await _seatClient.ReleaseSeat(req.ShowtimeId, locked);
+
+                throw new Exception($"Seat {s.ShowtimeSeatId} is already booked or blocked.");
+            }
+            lockedSeats.Add(s.ShowtimeSeatId);
         }
 
-        public async Task<IEnumerable<BookingDTOs>> GetAllAsync()
+        // 2️⃣ Gọi PricingService
+        var pricingRequest = new PricingCalculateRequest
         {
-            var entities = await _repository.GetAllAsync();
-            return entities.Select(e => new BookingDTOs
-            {
-                Id = e.Id,
-                UserId = e.UserId,
-                ShowtimeId = e.ShowtimeId,
-                Status = e.Status,
-                PaymentMethod = e.PaymentMethod,
-                TransactionId = e.TransactionId,
-                TotalPrice = e.TotalPrice,
-                DiscountAmount = e.DiscountAmount,
-                FinalPrice = e.FinalPrice,
-                CreatedAt = e.CreatedAt,
-                UpdatedAt = e.UpdatedAt,
-                Version = e.Version
-            });
-        }
+            Seats = req.Seats
+                .GroupBy(s => new { s.SeatType, s.TicketType })
+                .Select(g => new PricingSeatDto
+                {
+                    SeatType = g.Key.SeatType,
+                    TicketType = g.Key.TicketType,
+                    Quantity = g.Sum(x => x.Quantity),
+                }).ToList(),
 
-        public async Task<BookingDTOs?> GetByIdAsync(Guid id)
+            Fnbs = req.FnBs.Select(f => new PricingFnbDto
+            {
+                FnbItemId = f.FnbItemId,
+                Name = "",        // tên để PricingService điền
+                UnitPrice = 0,    // PricingService sẽ trả
+                Quantity = f.Quantity
+            }).ToList(),
+
+            PromotionCode = req.PromotionCode
+        };
+        
+        var price = await _pricing.CalculateAsync(pricingRequest);
+
+        // 3️⃣ Tạo booking và lưu giá
+        var booking = new Booking
         {
-            var e = await _repository.GetByIdAsync(id);
-            if (e == null) return null;
+            Id = Guid.NewGuid(),
+            UserId = req.UserId,
+            ShowtimeId = req.ShowtimeId,
+            Status = "PENDING",
 
-            return new BookingDTOs
+            TotalPrice = price.SubTotal,
+            DiscountAmount = price.Discount,
+            FinalPrice = price.FinalTotal,
+
+            TransactionId = "",
+            PaymentMethod = "",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Version = 1
+        };
+
+        var seats = req.Seats.Select((s, i) => new BookingSeat
+        {
+            Id = Guid.NewGuid(),
+            BookingId = booking.Id,
+            SeatId = s.ShowtimeSeatId,
+            SeatType = s.SeatType,
+            TicketType = s.TicketType,
+            Price = price.SeatPrice[i], // gán giá riêng cho từng ghế
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+
+        // Lưu FnB với đơn giá từ PricingService
+        var fnbs = price.Fnbs.Select(f => new BookingFnb
+        {
+            Id = Guid.NewGuid(),
+            BookingId = booking.Id,
+            FnbItemId = f.FnbItemId,
+            Quantity = f.Quantity,
+            UnitPrice = f.UnitPrice,
+            TotalFnbPrice = f.UnitPrice * f.Quantity
+        }).ToList();
+
+        // Lưu promo
+        BookingPromotion? promo = null;
+        if (price.Promotion != null)
+        {
+            promo = new BookingPromotion
             {
-                Id = e.Id,
-                UserId = e.UserId,
-                ShowtimeId = e.ShowtimeId,
-                Status = e.Status,
-                PaymentMethod = e.PaymentMethod,
-                TransactionId = e.TransactionId,
-                TotalPrice = e.TotalPrice,
-                DiscountAmount = e.DiscountAmount,
-                FinalPrice = e.FinalPrice,
-                CreatedAt = e.CreatedAt,
-                UpdatedAt = e.UpdatedAt,
-                Version = e.Version
+                Id = Guid.NewGuid(),
+                BookingId = booking.Id,
+                PromotionCode = price.Promotion.Code,
+                DiscountType = price.Promotion.DiscountType,
+                DiscountValue = price.Promotion.DiscountValue
             };
         }
 
-        public async Task AddAsync(BookingDTOs dto)
+        // 7️⃣ Lưu vào repository
+        try
         {
-            var entity = new Booking
-            {
-                Id = dto.Id,
-                UserId = dto.UserId,
-                ShowtimeId = dto.ShowtimeId,
-                Status = dto.Status,
-                PaymentMethod = dto.PaymentMethod,
-                TransactionId = dto.TransactionId,
-                TotalPrice = dto.TotalPrice,
-                DiscountAmount = dto.DiscountAmount,
-                FinalPrice = dto.FinalPrice,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt,
-                Version = dto.Version
-            };
-            await _repository.AddAsync(entity);
+            await _repo.CreateAsync(booking, seats, promo, fnbs);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("CreateAsync failed: " + ex.Message);
+            throw;
         }
 
-        public async Task UpdateAsync(BookingDTOs dto)
-        {
-            var entity = new Booking
-            {
-                Id = dto.Id,
-                UserId = dto.UserId,
-                ShowtimeId = dto.ShowtimeId,
-                Status = dto.Status,
-                PaymentMethod = dto.PaymentMethod,
-                TransactionId = dto.TransactionId,
-                TotalPrice = dto.TotalPrice,
-                DiscountAmount = dto.DiscountAmount,
-                FinalPrice = dto.FinalPrice,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt,
-                Version = dto.Version
-            };
+        return (booking.Id, lockedSeats);
+    }
 
-            await _repository.UpdateAsync(entity);
-        }
+    /// <summary>
+    /// 2️⃣ Cập nhật booking khi thanh toán ZaloPay callback
+    /// </summary>
+    public async Task HandlePaymentCallback(
+        Guid bookingId,
+        string status,            // "SUCCESSFUL" hoặc "FAIL"
+        string transactionId,
+        string paymentMethod,
+        Guid showtimeId,
+        List<Guid> seatIds,
+        string userId)
+    {
+        // 1. Cập nhật status, transactionId, paymentMethod
+        await _repo.UpdateStatusAsync(bookingId, status, transactionId, paymentMethod);
 
-        public async Task DeleteAsync(Guid id)
+        // 2. Nếu thành công → book ghế thực sự
+        if (status == "SUCCESSFUL")
         {
-            await _repository.DeleteAsync(id);
+            await _seatClient.BookSeats(showtimeId, seatIds);
         }
+        else
+        {
+            foreach (var seatId in seatIds)
+                await _seatClient.ReleaseSeat(showtimeId, seatId);
+        }
+    }
+
+    /// <summary>
+    /// 3️⃣ Lấy booking info (nếu cần)
+    /// </summary>
+    public async Task<Booking> GetBookingById(Guid bookingId)
+    {
+        return await _repo.GetByIdAsync(bookingId);
     }
 }

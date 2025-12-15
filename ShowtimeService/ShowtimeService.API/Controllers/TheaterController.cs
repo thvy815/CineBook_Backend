@@ -20,5 +20,25 @@ namespace ShowtimeService.API.Controllers
             var result = await _service.CreateAsync(dto);
             return Ok(result);
         }
+
+        [HttpGet("filter-by-province")]
+        public async Task<IActionResult> GetTheatersByProvinceAndDate(
+        [FromQuery] Guid? provinceId,
+        [FromQuery] string date)
+        {
+            try
+            {
+                var theaters = await _service.GetByProvinceWithShowtimeAsync(provinceId, date);
+                return Ok(theaters);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
     }
+
+
+
 }

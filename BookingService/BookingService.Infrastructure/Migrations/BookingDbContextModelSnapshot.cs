@@ -52,6 +52,7 @@ namespace BookingService.Infrastructure.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("TransactionId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -91,9 +92,10 @@ namespace BookingService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
+                    b.HasIndex("BookingId")
+                        .IsUnique();
 
-                    b.ToTable("BookingFnbs");
+                    b.ToTable("BookingFnB");
                 });
 
             modelBuilder.Entity("BookingService.Domain.Entities.BookingPromotion", b =>
@@ -118,7 +120,8 @@ namespace BookingService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
+                    b.HasIndex("BookingId")
+                        .IsUnique();
 
                     b.ToTable("BookingPromotions");
                 });
@@ -156,85 +159,42 @@ namespace BookingService.Infrastructure.Migrations
                     b.ToTable("BookingSeats");
                 });
 
-            modelBuilder.Entity("BookingService.Domain.Entities.UsedPromotion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BookingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PromotionCode")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UsedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookingId");
-
-                    b.ToTable("UsedPromotions");
-                });
-
             modelBuilder.Entity("BookingService.Domain.Entities.BookingFnb", b =>
                 {
-                    b.HasOne("BookingService.Domain.Entities.Booking", "Booking")
-                        .WithMany("BookingFnbs")
-                        .HasForeignKey("BookingId")
+                    b.HasOne("BookingService.Domain.Entities.Booking", null)
+                        .WithOne("BookingFnb")
+                        .HasForeignKey("BookingService.Domain.Entities.BookingFnb", "BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BookingService.Domain.Entities.BookingPromotion", b =>
                 {
-                    b.HasOne("BookingService.Domain.Entities.Booking", "Booking")
-                        .WithMany("BookingPromotions")
-                        .HasForeignKey("BookingId")
+                    b.HasOne("BookingService.Domain.Entities.Booking", null)
+                        .WithOne("Promotion")
+                        .HasForeignKey("BookingService.Domain.Entities.BookingPromotion", "BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BookingService.Domain.Entities.BookingSeat", b =>
                 {
-                    b.HasOne("BookingService.Domain.Entities.Booking", "Booking")
-                        .WithMany("BookingSeats")
+                    b.HasOne("BookingService.Domain.Entities.Booking", null)
+                        .WithMany("Seats")
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Booking");
-                });
-
-            modelBuilder.Entity("BookingService.Domain.Entities.UsedPromotion", b =>
-                {
-                    b.HasOne("BookingService.Domain.Entities.Booking", "Booking")
-                        .WithMany("UsedPromotions")
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BookingService.Domain.Entities.Booking", b =>
                 {
-                    b.Navigation("BookingFnbs");
+                    b.Navigation("BookingFnb")
+                        .IsRequired();
 
-                    b.Navigation("BookingPromotions");
+                    b.Navigation("Promotion")
+                        .IsRequired();
 
-                    b.Navigation("BookingSeats");
-
-                    b.Navigation("UsedPromotions");
+                    b.Navigation("Seats");
                 });
 #pragma warning restore 612, 618
         }

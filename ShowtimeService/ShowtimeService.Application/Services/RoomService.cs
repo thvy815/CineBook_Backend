@@ -48,5 +48,43 @@ namespace ShowtimeService.Application.Services
                 Status = entity.Status
             };
         }
+
+        public async Task<IEnumerable<RoomDto>> AutoCreateRoomsAsync(AutoCreateRoomDto dto)
+        {
+            var theater = await _context.Theaters
+                .FirstOrDefaultAsync(t => t.Id == dto.TheaterId);
+
+            if (theater == null)
+                throw new Exception("Theater not found");
+
+            List<Room> createdRooms = new();
+
+            for (int i = 1; i <= dto.NumberOfRooms; i++)
+            {
+                var room = new Room
+                {
+                    Id = Guid.NewGuid(),
+                    TheaterId = dto.TheaterId,
+                    Name = $"Room {i}",
+                    SeatCount = dto.DefaultSeatCount,
+                    Status = "active"
+                };
+
+                createdRooms.Add(room);
+                _context.Rooms.Add(room);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return createdRooms.Select(r => new RoomDto
+            {
+                Id = r.Id,
+                TheaterId = r.TheaterId,
+                Name = r.Name,
+                SeatCount = r.SeatCount,
+                Status = r.Status
+            }).ToList();
+        }
+
     }
 }

@@ -58,6 +58,14 @@ namespace MovieService.Application.Services
                 .Where(m => m.Status.ToLower() == status.ToLower())
                 .ToListAsync();
 
+        public async Task<List<MovieDetail>> GetByIdsAsync(List<Guid> ids)
+        {
+            return await _db.MovieDetails
+                .Where(m => ids.Contains(m.Id))
+                .ToListAsync();
+        }
+    }
+
         public async Task<PagedResponse<MovieDetail>> AdminSearchAsync(
         string? keyword,
         string? status,

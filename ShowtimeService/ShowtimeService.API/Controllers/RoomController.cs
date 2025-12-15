@@ -18,5 +18,12 @@ namespace ShowtimeService.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateRoomDto dto)
             => Ok(await _service.CreateAsync(dto));
+
+        [HttpPost("auto-create")]
+        public async Task<IActionResult> AutoCreate(AutoCreateRoomDto dto)
+        => Ok(await _service.AutoCreateRoomsAsync(dto));
     }
+
+
+
 }

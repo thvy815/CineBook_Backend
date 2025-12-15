@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ShowtimeService.Domain\ShowtimeService.Domain.csproj" />
-    <ProjectReference Include="..\ShowtimeService.Infrastucture\ShowtimeService.Infrastructure.csproj" />
+    <ProjectReference Include="..\ShowtimeService.Infrastructure\ShowtimeService.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

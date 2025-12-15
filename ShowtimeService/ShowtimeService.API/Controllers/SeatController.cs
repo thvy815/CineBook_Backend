@@ -18,5 +18,15 @@ namespace ShowtimeService.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateSeatDto dto)
             => Ok(await _service.CreateAsync(dto));
+
+        [HttpPost("generate")]
+        public async Task<IActionResult> GenerateSeats([FromBody] CreateSeatsRequest request)
+        {
+            var result = await _service.GenerateSeatsAsync(request);
+            return Ok(result);
+        }
     }
+
+
+   
 }

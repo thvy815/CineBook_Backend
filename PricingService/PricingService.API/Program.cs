@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PricingService.Domain.Interfaces;
-using PricingService.Infrastructure.Data;
 using PricingService.Infrastructure.Repositories;
-using PricingService.Application.Services;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using DotNetEnv;
 
 // Load variables from .env
@@ -29,10 +26,12 @@ builder.Services.AddScoped<ISeatPriceRepository, SeatPriceRepository>();
 builder.Services.AddScoped<IFnbItemRepository, FnbItemRepository>();
 builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 
-// Dependency Injection - Business services
-builder.Services.AddScoped<SeatPriceBusiness>();
-builder.Services.AddScoped<FnbItemBusiness>();
-builder.Services.AddScoped<PromotionBusiness>();
+builder.Services.AddScoped<PricingService.Infrastructure.Repositories.PricingRepository>();
+builder.Services.AddScoped<PricingService.Application.Services.PricingBusiness>();
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

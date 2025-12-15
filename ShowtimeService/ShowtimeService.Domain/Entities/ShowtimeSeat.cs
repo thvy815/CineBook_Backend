@@ -7,7 +7,7 @@ namespace ShowtimeService.Domain.Entities
         public Guid Id { get; set; }
         public Guid ShowtimeId { get; set; }
         public Guid SeatId { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = "Available";
         public DateTime UpdatedAt { get; set; }
 
         // Navigation properties

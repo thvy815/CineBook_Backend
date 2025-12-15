@@ -12,7 +12,7 @@ namespace ShowtimeService.Domain.Entities
         public string Type { get; set; }
 
         // Navigation properties
-        public Room Room { get; set; }
+        public Room? Room { get; set; }
         public ICollection<ShowtimeSeat> ShowtimeSeats { get; set; } = new List<ShowtimeSeat>();
     }
 }

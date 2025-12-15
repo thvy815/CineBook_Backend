@@ -6,6 +6,7 @@
         public Guid ShowtimeId { get; set; }
         public Guid SeatId { get; set; }
         public string Status { get; set; }
+        public string SeatType { get; set; } = null!;
         public DateTime UpdatedAt { get; set; }
     }
 

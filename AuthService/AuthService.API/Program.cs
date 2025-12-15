@@ -57,7 +57,7 @@ builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>(
 
 builder.Services.AddHttpClient<IUserProfileClient, UserProfileClient>(client =>
 {
-	client.BaseAddress = new Uri("https://localhost:7217/"); // URL UserProfileService
+    client.BaseAddress = new Uri("https://localhost:7217/"); // URL UserProfileService
 });
 
 // JWT Configuration
