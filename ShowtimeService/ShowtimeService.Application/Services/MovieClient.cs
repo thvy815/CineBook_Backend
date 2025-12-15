@@ -15,7 +15,7 @@ namespace ShowtimeService.Application.Services
         public async Task<List<MovieFromMovieServiceDto>> GetNowPlayingAsync()
         {
             var movies = await _http.GetFromJsonAsync<List<MovieFromMovieServiceDto>>(
-                "/api/MovieDetail/status/now-playing"
+                "/api/MovieDetail/now-playing"
             );
 
             return movies ?? new List<MovieFromMovieServiceDto>();

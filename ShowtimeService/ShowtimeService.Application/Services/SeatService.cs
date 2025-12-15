@@ -66,12 +66,12 @@ namespace ShowtimeService.Application.Services
 
                 while (colIndex <= request.Columns)
                 {
-                    string type = "Single";
+                    string type = "SINGLE";
 
                     // Ghế đôi
                     if (request.DoubleSeats > 0 && colIndex < request.Columns)
                     {
-                        type = "Double";
+                        type = "DOUBLE";
                         request.DoubleSeats--;
                     }
 
@@ -85,7 +85,7 @@ namespace ShowtimeService.Application.Services
                         Type = type
                     });
 
-                    colIndex += type == "Double" ? 2 : 1;
+                    colIndex += type == "DOUBLE" ? 2 : 1;
                 }
             }
 

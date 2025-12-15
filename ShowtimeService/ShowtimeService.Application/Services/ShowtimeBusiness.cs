@@ -141,16 +141,16 @@ namespace ShowtimeService.Application.Services
         public async Task GenerateAutoShowtimesAsync(Guid theaterId, Guid roomId)
         {
             var movies = await _movieClient.GetNowPlayingAsync();
-
             if (!movies.Any())
                 throw new Exception("Movie Service did not return any NOW_PLAYING movies.");
 
             var today = DateTime.Today;
-
             var random = new Random();
-
             const int startHour = 7;
             const int endHour = 22;
+
+            // TimeZone VN
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
             foreach (var movie in movies)
             {
@@ -158,7 +158,7 @@ namespace ShowtimeService.Application.Services
                 {
                     var date = today.AddDays(d);
 
-                    // Random giờ bắt đầu (đảm bảo đủ thời lượng phim)
+                    // Giờ bắt đầu max để phim kết thúc trước 22:00
                     int maxStartHour = endHour - (int)Math.Ceiling(movie.Duration / 60.0);
                     if (maxStartHour < startHour)
                         continue; // phim quá dài, bỏ qua
@@ -166,29 +166,79 @@ namespace ShowtimeService.Application.Services
                     int hour = random.Next(startHour, maxStartHour + 1);
                     int minute = random.Next(0, 60);
 
-                    var startTime = date.AddHours(hour).AddMinutes(minute);
-                    var endTime = startTime.AddMinutes(movie.Duration);
+                    // Giờ local VN với DateTimeKind.Unspecified
+                    var startTimeLocal = DateTime.SpecifyKind(date.AddHours(hour).AddMinutes(minute), DateTimeKind.Unspecified);
+                    var endTimeLocal = DateTime.SpecifyKind(startTimeLocal.AddMinutes(movie.Duration), DateTimeKind.Unspecified);
 
-                    // Chắc chắn không vượt quá 22:00
-                    if (endTime.Hour >= endHour && endTime.Minute > 0)
+                    // Đảm bảo không vượt quá 22:00
+                    if (endTimeLocal.Hour > endHour || (endTimeLocal.Hour == endHour && endTimeLocal.Minute > 0))
                         continue;
 
+                    // Chuyển sang UTC để lưu DB
+                    var startTimeUtc = TimeZoneInfo.ConvertTimeToUtc(startTimeLocal, vnTimeZone);
+                    var endTimeUtc = TimeZoneInfo.ConvertTimeToUtc(endTimeLocal, vnTimeZone);
+
+                    // Tạo showtime
                     var showtime = new Showtime
                     {
+                        Id = Guid.NewGuid(),
                         RoomId = roomId,
                         TheaterId = theaterId,
                         MovieId = movie.Id,
-                        StartTime = startTime.ToUniversalTime(),
-                        EndTime = endTime.ToUniversalTime()
+                        StartTime = startTimeUtc,
+                        EndTime = endTimeUtc
                     };
 
                     await _context.Showtimes.AddAsync(showtime);
+                    await _context.SaveChangesAsync(); // cần lưu để có Id
+
+                    // Tạo tất cả ghế cho showtime
+                    await CreateShowtimeSeatsAsync(showtime.Id);
                 }
             }
-
-            // Save 1 lần cho hiệu năng tốt hơn
-            await _context.SaveChangesAsync();
         }
+
+        public async Task<int> CreateShowtimeSeatsAsync(Guid showtimeId)
+        {
+            // 1. Lấy showtime
+            var showtime = await _context.Showtimes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == showtimeId);
+
+            if (showtime == null)
+                throw new Exception("Showtime not found");
+
+            // 2. Check đã tạo ghế cho showtime chưa
+            bool existed = await _context.ShowtimeSeats
+                .AnyAsync(x => x.ShowtimeId == showtimeId);
+
+            if (existed)
+                throw new Exception("Showtime seats already created");
+
+            // 3. Lấy toàn bộ ghế của room
+            var seats = await _context.Seats
+                .Where(x => x.RoomId == showtime.RoomId)
+                .ToListAsync();
+
+            if (!seats.Any())
+                throw new Exception("Room has no seats");
+
+            // 4. Tạo ShowtimeSeat cho TẤT CẢ ghế
+            var showtimeSeats = seats.Select(seat => new ShowtimeSeat
+            {
+                Id = Guid.NewGuid(),
+                ShowtimeId = showtimeId,
+                SeatId = seat.Id,          // 🎯 trỏ thẳng
+                Status = "Available",
+                UpdatedAt = DateTime.UtcNow
+            }).ToList();
+
+            await _context.ShowtimeSeats.AddRangeAsync(showtimeSeats);
+            await _context.SaveChangesAsync();
+
+            return showtimeSeats.Count;
+        }
+
 
         // Lọc suất chiếu theo theaterId, movieId, date
         public async Task<IEnumerable<ShowtimeDto>> FilterAsync(Guid? theaterId, Guid? movieId, string? date)
