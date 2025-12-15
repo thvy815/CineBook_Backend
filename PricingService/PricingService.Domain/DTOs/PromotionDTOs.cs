@@ -18,4 +18,15 @@ namespace PricingService.Domain.DTOs
         public bool IsOneTimeUse { get; set; }
         public string Description { get; set; } = "";
     }
+
+    public class UpdatePromotionRequest
+    {
+        public string DiscountType { get; set; } = null!;
+        public decimal DiscountValue { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsOneTimeUse { get; set; }
+        public string? Description { get; set; }
+    }
 }

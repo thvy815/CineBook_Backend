@@ -28,6 +28,14 @@ namespace ShowtimeService.API.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, UpdateProvinceDto dto)
+        {
+            var result = await _service.UpdateAsync(id, dto);
+            return result == null ? NotFound() : Ok(result);
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

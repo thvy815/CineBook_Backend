@@ -20,6 +20,16 @@
         public string Status { get; set; }
     }
 
+    public class UpdateTheaterDto
+    {
+        public string Name { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public Guid ProvinceId { get; set; }
+        public string Status { get; set; } = null!;
+    }
+
+
     public class AutoCreateTheaterRequest
     {
         public Guid ProvinceId { get; set; }
