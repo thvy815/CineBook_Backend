@@ -12,6 +12,19 @@ Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cấu hình CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") // frontend URL
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // nếu dùng cookie hoặc Authorization
+        });
+});
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -39,7 +52,6 @@ builder.Services.AddScoped<IBookingSeatRepository, BookingSeatRepository>();
 builder.Services.AddScoped<IPaymentService, MockPaymentService>();
 builder.Services.AddHostedService<BookingExpirationService>();
 
-
 // Dependency Injection - Register all Business Services
 builder.Services.AddScoped<BookingBusiness>();
 
@@ -55,8 +67,6 @@ builder.Services.AddHttpClient<PricingClient>(client =>
     client.BaseAddress = new Uri(
         builder.Configuration["Services:Pricing"]);
 });
-
-
 
 var app = builder.Build();
 
@@ -77,6 +87,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
