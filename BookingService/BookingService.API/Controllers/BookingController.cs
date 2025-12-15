@@ -36,4 +36,37 @@ public class BookingController : ControllerBase
     }
 
 
+    [HttpPost("{bookingId}/payment")]
+    public async Task<IActionResult> CreatePayment(Guid bookingId)
+    {
+        var orderUrl = await _business.CreatePaymentForBooking(bookingId);
+        return Ok(new { orderUrl });
+    }
+
+    [HttpPost("api/payments/callback")]
+    public async Task<IActionResult> ReceivePaymentCallback([FromBody] PaymentCallbackDto dto)
+    {
+        Console.WriteLine("Controller callback");
+        await _business.HandlePaymentCallback(
+            dto.BookingId,
+            dto.Status,
+            dto.TransactionId,
+            dto.PaymentMethod
+        );
+
+        return Ok();
+    }
+
+    public class PaymentCallbackDto
+    {
+        public Guid BookingId { get; set; }
+        public string Status { get; set; } // SUCCESS / FAILED
+        public string TransactionId { get; set; }
+        public string PaymentMethod { get; set; }
+    }
+
+
+
 }
+
+

@@ -68,6 +68,12 @@ builder.Services.AddHttpClient<PricingClient>(client =>
         builder.Configuration["Services:Pricing"]);
 });
 
+builder.Services.AddHttpClient<ZaloPayClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7093/"); // PaymentService sandbox
+});
+
+
 var app = builder.Build();
 
 // Auto apply migration on startup

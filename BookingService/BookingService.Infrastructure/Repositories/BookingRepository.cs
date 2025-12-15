@@ -71,7 +71,12 @@ public class BookingRepository : IBookingRepository
 
         return booking;
     }
-
+    public async Task<Booking?> GetByTransactionIdAsync(string transactionId)
+    {
+        return await _db.Bookings
+            .Include(b => b.Seats)   // ⚠️ CỰC KỲ QUAN TRỌNG
+            .FirstOrDefaultAsync(b => b.TransactionId == transactionId);
+    }
     public async Task<List<Booking>> GetPendingBookingsAsync()
     {
         return await _db.Bookings
