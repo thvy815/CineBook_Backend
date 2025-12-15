@@ -98,7 +98,8 @@ public class PricingBusiness
                 Id = f.Id,
                 Name = f.Name,
                 Description = f.Description,
-                UnitPrice = f.UnitPrice
+                UnitPrice = f.UnitPrice,
+                url = f.url
             })
             .ToListAsync();
     }
