@@ -33,6 +33,15 @@ public class PricingController : ControllerBase
         return Ok(prices);
     }
 
+    [HttpGet("promotions")]
+    public async Task<IActionResult> GetActivePromotions()
+    {
+        var items = await _business.GetActivePromotions();
+        return Ok(items);
+    }
+
+
+
     // 🔹 GET: api/Promotion
     [HttpGet]
     public async Task<IActionResult> GetAll()

@@ -10,15 +10,18 @@ public class BookingBusiness
     private readonly ShowtimeSeatClient _seatClient;
     private readonly PricingClient _pricing;
     private readonly IBookingRepository _repo;
+    private readonly ZaloPayClient _zaloPayClient;
 
     public BookingBusiness(
         ShowtimeSeatClient seatClient,
         PricingClient pricing,
-        IBookingRepository repo)
+        IBookingRepository repo,
+        ZaloPayClient zaloPayClient)
     {
         _seatClient = seatClient;
         _pricing = pricing;
         _repo = repo;
+        _zaloPayClient = zaloPayClient;
     }
 
     /// <summary>
@@ -28,31 +31,15 @@ public class BookingBusiness
     {
         var lockedSeats = new List<Guid>();
 
-        // Lock tất cả ghế trước
-        foreach (var s in req.Seats)
-        {
-            var ok = await _seatClient.LockSeat(req.ShowtimeId, s.ShowtimeSeatId);
-            if (!ok)
-            {
-                // Rollback tất cả ghế đã lock
-                foreach (var locked in lockedSeats)
-                    await _seatClient.ReleaseSeat(req.ShowtimeId, locked);
-
-                throw new Exception($"Seat {s.ShowtimeSeatId} is already booked or blocked.");
-            }
-            lockedSeats.Add(s.ShowtimeSeatId);
-        }
-
         // 2️⃣ Gọi PricingService
         var pricingRequest = new PricingCalculateRequest
         {
             Seats = req.Seats
-                .GroupBy(s => new { s.SeatType, s.TicketType })
                 .Select(g => new PricingSeatDto
                 {
-                    SeatType = g.Key.SeatType,
-                    TicketType = g.Key.TicketType,
-                    Quantity = g.Sum(x => x.Quantity),
+                    SeatType = g.SeatType,
+                    TicketType = g.TicketType,
+                    Quantity = 1,
                 }).ToList(),
 
             Fnbs = req.FnBs.Select(f => new PricingFnbDto
@@ -86,6 +73,7 @@ public class BookingBusiness
             UpdatedAt = DateTime.UtcNow,
             Version = 1
         };
+        req.BookingId = booking.Id;
 
         var seats = req.Seats.Select((s, i) => new BookingSeat
         {
@@ -137,36 +125,87 @@ public class BookingBusiness
         return (booking.Id, lockedSeats);
     }
 
-    /// <summary>
-    /// 2️⃣ Cập nhật booking khi thanh toán ZaloPay callback
-    /// </summary>
+    // ==============================
+    // 2️⃣ Tạo payment ZaloPay
+    // ==============================
+    public async Task<string> CreatePaymentForBooking(Guid bookingId)
+    {
+        var booking = await _repo.GetByIdAsync(bookingId);
+        if (booking == null)
+            throw new Exception("Booking not found");
+
+        var (orderUrl, transactionId) =
+            await _zaloPayClient.CreateOrderAsync(
+                booking.Id,
+                booking.UserId,
+                booking.FinalPrice
+            );
+
+        await _repo.UpdateStatusAsync(
+            booking.Id,
+            "PENDING",
+            transactionId,
+            "ZaloPay"
+        );
+
+        return orderUrl;
+    }
+
+    // ==============================
+    // 3️⃣ Callback từ PaymentService
+    // ==============================
     public async Task HandlePaymentCallback(
         Guid bookingId,
-        string status,            // "SUCCESSFUL" hoặc "FAIL"
+        string status,          // SUCCESS / FAILED
         string transactionId,
-        string paymentMethod,
-        Guid showtimeId,
-        List<Guid> seatIds,
-        string userId)
+        string paymentMethod)
     {
-        // 1. Cập nhật status, transactionId, paymentMethod
-        await _repo.UpdateStatusAsync(bookingId, status, transactionId, paymentMethod);
+        var booking = await _repo.GetByIdAsync(bookingId);
+        if (booking == null)
+            throw new Exception("Booking not found");
+        Console.WriteLine("Hi handle1");
 
-        // 2. Nếu thành công → book ghế thực sự
-        if (status == "SUCCESSFUL")
+        await _repo.UpdateStatusAsync(
+            bookingId,
+            status,
+            transactionId,
+            paymentMethod
+        );
+
+        var seatIds = booking.Seats.Select(s => s.SeatId).ToList();
+
+        if (status == "SUCCESS")
         {
-            await _seatClient.BookSeats(showtimeId, seatIds);
+            Console.WriteLine("Hi handle if");
+            try
+            {
+                if (status == "SUCCESS")
+                {
+                    await _seatClient.BookSeats(booking.ShowtimeId, seatIds);
+                    await _repo.UpdateStatusAsync(booking.Id, "SUCCESS", transactionId, "ZaloPay");
+                }
+                else
+                {
+                    foreach (var seatId in seatIds)
+                        await _seatClient.ReleaseSeat(booking.ShowtimeId, seatId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("🔥 HandlePaymentCallback failed: " + ex);
+                throw;
+            } 
         }
         else
         {
             foreach (var seatId in seatIds)
-                await _seatClient.ReleaseSeat(showtimeId, seatId);
+                await _seatClient.ReleaseSeat(booking.ShowtimeId, seatId);
         }
     }
 
-    /// <summary>
-    /// 3️⃣ Lấy booking info (nếu cần)
-    /// </summary>
+    // ==============================
+    // 4️⃣ Get booking
+    // ==============================
     public async Task<Booking> GetBookingById(Guid bookingId)
     {
         return await _repo.GetByIdAsync(bookingId);

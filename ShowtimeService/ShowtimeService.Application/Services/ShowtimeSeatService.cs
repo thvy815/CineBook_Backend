@@ -88,6 +88,10 @@ namespace ShowtimeService.Application.Services
             return showtimeSeats.Count;
         }
 
+
+
+
+
         // Lock ghế
         public async Task<bool> TryLockSeatDb(Guid showtimeId, Guid seatId)
         {

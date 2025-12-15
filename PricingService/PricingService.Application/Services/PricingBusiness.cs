@@ -118,6 +118,38 @@ public class PricingBusiness
             .ToListAsync();
     }
 
+    public async Task<List<G_PROMOTION>> GetAllPromotionAsync()
+    {
+        return await _db.Promotions
+            .Select(f => new G_PROMOTION
+            {
+                Id = f.Id,
+                Code = f.Code,
+                DiscountType = f.DiscountType,
+                DiscountValue = f.DiscountValue,
+                IsActive = f.IsActive,
+                Description = f.Description
+            })
+            .ToListAsync();
+    }
+    public async Task<List<G_PROMOTION>> GetActivePromotions()
+    {
+        return await _db.Promotions
+            .Where(f => f.IsActive)  // Lọc chỉ lấy các promotion có IsActive = true
+            .Select(f => new G_PROMOTION
+            {
+                Id = f.Id,
+                Code = f.Code,
+                DiscountType = f.DiscountType,
+                DiscountValue = f.DiscountValue,
+                IsActive = f.IsActive,
+                Description = f.Description
+            })
+            .ToListAsync();
+    }
+
+
+
     public async Task<List<PromotionDTOs>> GetAllPromotionsAsync()
     {
         return await _db.Promotions
