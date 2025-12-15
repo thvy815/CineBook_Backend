@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PricingService.Domain.DTOs;
 namespace PricingService.Application.Services;
 public class PricingBusiness
 {
@@ -85,7 +86,34 @@ public class PricingBusiness
             discount,
             subTotal - discount,
             fnbDetails,
-            promoDetail
+        promoDetail
         );
+    }
+
+    public async Task<List<G_FNBDTO>> GetAllFnbItemsAsync()
+    {
+        return await _db.FnbItems
+            .Select(f => new G_FNBDTO
+            {
+                Id = f.Id,
+                Name = f.Name,
+                Description = f.Description,
+                UnitPrice = f.UnitPrice
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<G_SEATPRICEDTO>> GetAllSeatPricesAsync()
+    {
+        return await _db.SeatPrices
+            .Select(s => new G_SEATPRICEDTO
+            {
+                Id = s.Id,
+                SeatType = s.SeatType,
+                TicketType = s.TicketType,
+                BasePrice = s.BasePrice,
+                Description = s.Description
+            })
+            .ToListAsync();
     }
 }
