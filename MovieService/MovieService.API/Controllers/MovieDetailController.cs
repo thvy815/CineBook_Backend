@@ -115,7 +115,7 @@ namespace MovieService.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("status/now-playing")]
+        [HttpGet("now-playing")]
         public async Task<IActionResult> GetNowPlaying()
         {
             var movies = await _service.GetByStatusAsync("NowPlaying");

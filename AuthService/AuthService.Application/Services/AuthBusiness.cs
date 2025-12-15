@@ -186,6 +186,33 @@ namespace AuthService.Application.Services
             };
         }
 
+        public async Task<bool> UpdateUserRoleStatusAsync(
+    Guid userId,
+    UpdateUserRoleStatusDto dto)
+        {
+            var user = await _db.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+                return false;
+
+            var role = await _db.Roles
+                .FirstOrDefaultAsync(r => r.Name == dto.Role);
+
+            if (role == null)
+                return false;
+
+            user.RoleId = role.Id;
+            user.Status = dto.Status;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+
+
         public async Task<AuthResultDto> RefreshTokenAsync(string refreshToken)
 		{
 			var existing = await _db.RefreshTokens.Include(r => r.User).FirstOrDefaultAsync(r => r.Token == refreshToken);

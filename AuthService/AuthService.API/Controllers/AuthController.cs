@@ -95,6 +95,21 @@ namespace AuthService.API.Controllers
             return Ok(users);
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpPut("users/{userId}")]
+        public async Task<IActionResult> UpdateUserRoleStatus(
+    Guid userId,
+    [FromBody] UpdateUserRoleStatusDto dto)
+        {
+            var ok = await _auth.UpdateUserRoleStatusAsync(userId, dto);
+
+            if (!ok)
+                return BadRequest(new { message = "Cập nhật role hoặc status thất bại" });
+
+            return Ok(new { message = "Cập nhật role và status thành công" });
+        }
+
+
         [HttpPost("forgot-password")]
 		public async Task<IActionResult> ForgotPassword([FromBody] string email)
 		{
@@ -120,5 +135,7 @@ namespace AuthService.API.Controllers
 			if (!ok) return NotFound();
 			return Ok(new { message = "Tài khoản đã được xóa" });
 		}
+
+
 	}
 }

@@ -12,4 +12,5 @@
         public string PosterUrl { get; set; } = string.Empty;
         public string Trailer { get; set; } = string.Empty;
     }
+
 }

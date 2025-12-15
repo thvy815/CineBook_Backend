@@ -47,6 +47,8 @@ namespace MovieService.Application.Services
             return true;
         }
 
+
+
         public async Task<IEnumerable<MovieDetail>> SearchAsync(string keyword)
             => await _db.MovieDetails
                 .Where(m => m.Title.ToLower().Contains(keyword.ToLower()) ||

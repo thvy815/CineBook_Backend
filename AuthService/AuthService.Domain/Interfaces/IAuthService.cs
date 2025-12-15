@@ -19,5 +19,9 @@ namespace AuthService.Domain.Interfaces
         Task<PagedResponse<UserListResponse>> GetUsersAsync(
         string? keyword, string? status, string? role,
         int page, int size, string? sortBy, string? sortType);
+        Task<bool> UpdateUserRoleStatusAsync(
+    Guid userId,
+    UpdateUserRoleStatusDto dto);
+
     }
 }
