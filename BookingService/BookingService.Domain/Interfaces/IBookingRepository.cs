@@ -21,5 +21,6 @@ public interface IBookingRepository
     Task<List<Booking>> GetPendingBookingsAsync();
 
     Task<Booking?> GetByTransactionIdAsync(string transactionId);
+    Task<List<Booking>> GetAllAsync();
 
 }

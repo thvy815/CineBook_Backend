@@ -85,4 +85,13 @@ public class BookingRepository : IBookingRepository
             .ToListAsync();
     }
 
+    public async Task<List<Booking>> GetAllAsync()
+    {
+        return await _db.Bookings
+            .Include(b => b.Seats)
+            .OrderByDescending(b => b.CreatedAt)
+            .ToListAsync();
+    }
+
+
 }

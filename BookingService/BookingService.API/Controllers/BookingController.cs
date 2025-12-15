@@ -64,6 +64,15 @@ public class BookingController : ControllerBase
         public string TransactionId { get; set; }
         public string PaymentMethod { get; set; }
     }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetAllBookings()
+    {
+        var bookings = await _business.GetAllBookings();
+        return Ok(bookings);
+    }
+
+
 
 
 
