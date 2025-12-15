@@ -8,6 +8,7 @@ namespace ShowtimeService.Application.DTOs
 {
     public class ShowtimeLiteDto
     {
+        public Guid ShowtimeId { get; set; }
         public Guid RoomId { get; set; }
         public string RoomName { get; set; } = string.Empty;
         public string Date { get; set; } = string.Empty;           // yyyy-MM-dd

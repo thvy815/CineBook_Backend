@@ -373,8 +373,7 @@ namespace ShowtimeService.Application.Services
         public async Task<List<TheaterShowtimeDto>> FilterShowtimeAsync(
             Guid provinceId,
             Guid movieId,
-            string date,
-            Guid? theaterId = null)
+            string date)
         {
             var (startUtc, endUtc) = ParseDate(date);
 
@@ -390,10 +389,6 @@ namespace ShowtimeService.Application.Services
                     s.StartTime >= startUtc &&
                     s.StartTime < endUtc
                 select new { s, t, r };
-
-
-            if (theaterId.HasValue)
-                query = query.Where(x => x.t.Id == theaterId.Value);
 
             var raw = await query
                 .OrderBy(x => x.s.StartTime)
@@ -414,6 +409,7 @@ namespace ShowtimeService.Application.Services
                     TheaterAddress = g.Key.Address,
                     Showtimes = g.Select(x => new ShowtimeLiteDto
                     {
+                        ShowtimeId = x.s.Id,
                         RoomId = x.s.RoomId,
                         RoomName = x.r.Name,
 
@@ -429,8 +425,5 @@ namespace ShowtimeService.Application.Services
 
             return result;
         }
-
-
-
     }
 }

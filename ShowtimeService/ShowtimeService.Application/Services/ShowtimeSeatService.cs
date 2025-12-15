@@ -34,67 +34,50 @@ namespace ShowtimeService.Application.Services
                     Id = s.Id,
                     ShowtimeId = s.ShowtimeId,
                     SeatId = s.SeatId,
-                    Status = s.Status,
+
+                    SeatNumber = s.Seat.SeatNumber,   // 🎯
+                    RowLabel = s.Seat.RowLabel,     // 🎯
+                    ColumnIndex = s.Seat.ColumnIndex, // 🎯
                     SeatType = s.Seat.Type,
+
+                    Status = s.Status,
                     UpdatedAt = s.UpdatedAt
-                }).ToListAsync();
+                })
+                .ToListAsync();
         }
 
-        public async Task<int> CreateShowtimeSeatsAsync(Guid showtimeId, int seatCount)
-        {
-            if (seatCount <= 0)
-                throw new Exception("Seat count must be greater than 0");
 
+        public async Task<int> CreateShowtimeSeatsAsync(Guid showtimeId)
+        {
             // 1. Lấy showtime
             var showtime = await _context.Showtimes
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == showtimeId);
+                .FirstOrDefaultAsync(x => x.Id == showtimeId);
 
             if (showtime == null)
                 throw new Exception("Showtime not found");
 
-            // 2. Check đã tạo ShowtimeSeat chưa
+            // 2. Check đã tạo ghế cho showtime chưa
             bool existed = await _context.ShowtimeSeats
-                .AnyAsync(s => s.ShowtimeId == showtimeId);
+                .AnyAsync(x => x.ShowtimeId == showtimeId);
 
             if (existed)
                 throw new Exception("Showtime seats already created");
 
-            var roomId = showtime.RoomId;
+            // 3. Lấy toàn bộ ghế của room
+            var seats = await _context.Seats
+                .Where(x => x.RoomId == showtime.RoomId)
+                .ToListAsync();
 
-            // 3. Tạo seat mới theo số lượng nhập
-            var newSeats = new List<Seat>();
-            int seatsPerRow = 10; // số ghế tối đa mỗi row
-            int rowIndex = 0;
-            for (int i = 0; i < seatCount; i++)
-            {
-                if (i % seatsPerRow == 0 && i != 0) rowIndex++;
+            if (!seats.Any())
+                throw new Exception("Room has no seats");
 
-                char rowLabelChar = (char)('A' + rowIndex);
-                string rowLabel = rowLabelChar.ToString();
-                int columnIndex = (i % seatsPerRow) + 1;
-
-                var seat = new Seat
-                {
-                    Id = Guid.NewGuid(),
-                    RoomId = roomId,
-                    RowLabel = rowLabel,
-                    ColumnIndex = columnIndex,
-                    SeatNumber = $"{rowLabel}{columnIndex}",
-                    Type = "Normal" // có thể truyền thêm nếu muốn
-                };
-
-                newSeats.Add(seat);
-            }
-
-            await _context.Seats.AddRangeAsync(newSeats);
-
-            // 4. Tạo ShowtimeSeat tương ứng
-            var showtimeSeats = newSeats.Select(s => new ShowtimeSeat
+            // 4. Tạo ShowtimeSeat cho TẤT CẢ ghế
+            var showtimeSeats = seats.Select(seat => new ShowtimeSeat
             {
                 Id = Guid.NewGuid(),
                 ShowtimeId = showtimeId,
-                SeatId = s.Id,
+                SeatId = seat.Id,          // 🎯 trỏ thẳng
                 Status = "Available",
                 UpdatedAt = DateTime.UtcNow
             }).ToList();
@@ -104,6 +87,8 @@ namespace ShowtimeService.Application.Services
 
             return showtimeSeats.Count;
         }
+
+
 
 
 
