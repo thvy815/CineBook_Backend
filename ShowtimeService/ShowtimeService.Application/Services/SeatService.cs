@@ -59,8 +59,15 @@ namespace ShowtimeService.Application.Services
         {
             var seats = new List<Seat>();
             var rowLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            int totalRows = request.Rows;
+            int doubleSeatsRemaining = request.DoubleSeats;
+            int seatsPerRow = request.Columns;
 
-            for (int r = 0; r < request.Rows; r++)
+            // Số hàng cần để chứa tất cả ghế đôi
+            int rowsForDouble = (int)Math.Ceiling(doubleSeatsRemaining / (double)seatsPerRow);
+            int startDoubleRow = totalRows - rowsForDouble;
+
+            for (int r = 0; r < totalRows; r++)
             {
                 int colIndex = 1;
 
@@ -68,20 +75,20 @@ namespace ShowtimeService.Application.Services
                 {
                     string type = "SINGLE";
 
-                    // Ghế đôi
-                    if (request.DoubleSeats > 0 && colIndex < request.Columns)
+                    // Hàng dành cho ghế đôi
+                    if (r >= startDoubleRow && doubleSeatsRemaining > 0 && colIndex < request.Columns)
                     {
                         type = "DOUBLE";
-                        request.DoubleSeats--;
+                        doubleSeatsRemaining--;
                     }
 
                     seats.Add(new Seat
                     {
                         Id = Guid.NewGuid(),
                         RoomId = request.RoomId,
-                        RowLabel = rowLabels[r].ToString(),
+                        RowLabel = rowLabels[r % rowLabels.Length].ToString(),
                         ColumnIndex = colIndex,
-                        SeatNumber = $"{rowLabels[r]}{colIndex}",
+                        SeatNumber = $"{rowLabels[r % rowLabels.Length]}{colIndex}",
                         Type = type
                     });
 
@@ -89,11 +96,9 @@ namespace ShowtimeService.Application.Services
                 }
             }
 
-            // LƯU DB
             await _context.Seats.AddRangeAsync(seats);
             await _context.SaveChangesAsync();
 
-            // Trả về dạng DTO
             return seats.Select(s => new SeatDto
             {
                 Id = s.Id,

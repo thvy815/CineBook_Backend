@@ -17,4 +17,23 @@ public class BookingController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{bookingId}")]
+    public async Task<IActionResult> GetBookingById(Guid bookingId)
+    {
+        try
+        {
+            var booking = await _business.GetBookingById(bookingId);
+
+            if (booking == null)
+                return NotFound(new { message = "Booking not found" });
+
+            return Ok(booking);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+        }
+    }
+
+
 }
