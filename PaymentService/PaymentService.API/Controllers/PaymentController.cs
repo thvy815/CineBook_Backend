@@ -49,7 +49,8 @@ public class PaymentController : ControllerBase
         // Xác định trạng thái
         var status = wrapper.Type == 1 ? "SUCCESS" : "FAILED";
         var transactionId = data.app_trans_id;
-        var bookingId = Guid.Parse(data.app_user); // Hoặc mapping transactionId -> bookingId
+        var embed = JsonConvert.DeserializeObject<Dictionary<string, string>>(data.embed_data);
+        var bookingId = Guid.Parse(embed["BookingId"]);
 
         // 1️⃣ Cập nhật PaymentService record
         await _business.HandleCallback(wrapper);
@@ -66,6 +67,7 @@ public class PaymentController : ControllerBase
                 PaymentMethod = "ZaloPay"
             }
         );
+        Console.WriteLine("Ket noi Booking");
 
         return Ok(new { return_code = 1, return_message = "success" });
     }

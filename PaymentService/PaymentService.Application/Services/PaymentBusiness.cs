@@ -45,7 +45,7 @@ public class PaymentBusiness
         // ===== DATA =====
         string appUser = userId.ToString();
         long amount = (long)amountVnd; // VND (KHÔNG *1000)
-        string embedData = "{}";
+        string embedData = JsonConvert.SerializeObject(new { BookingId = bookingId });
         string item = "[]";
 
         // ===== MAC INPUT (CHUẨN ZALOPAY) =====
