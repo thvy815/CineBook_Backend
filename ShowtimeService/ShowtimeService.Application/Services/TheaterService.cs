@@ -51,6 +51,30 @@ namespace ShowtimeService.Application.Services
             };
         }
 
+        public async Task<TheaterDto?> UpdateAsync(Guid id, UpdateTheaterDto dto)
+        {
+            var entity = await _context.Theaters.FindAsync(id);
+            if (entity == null) return null;
+
+            entity.Name = dto.Name;
+            entity.Address = dto.Address;
+            entity.Description = dto.Description;
+            entity.ProvinceId = dto.ProvinceId;
+            entity.Status = dto.Status;
+
+            await _context.SaveChangesAsync();
+
+            return new TheaterDto
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Address = entity.Address,
+                Description = entity.Description,
+                ProvinceId = entity.ProvinceId,
+                Status = entity.Status
+            };
+        }
+
         public async Task<IEnumerable<TheaterDto>> GetByProvinceWithShowtimeAsync(Guid? provinceId, string date)
         {
             var theatersQuery = _context.Theaters.AsQueryable();

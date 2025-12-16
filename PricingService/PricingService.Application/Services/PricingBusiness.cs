@@ -149,4 +149,54 @@ public class PricingBusiness
     }
 
 
+
+    public async Task<List<PromotionDTOs>> GetAllPromotionsAsync()
+    {
+        return await _db.Promotions
+            .Select(p => new PromotionDTOs
+            {
+                Id = p.Id,
+                Code = p.Code,
+                DiscountType = p.DiscountType,
+                DiscountValue = p.DiscountValue,
+                StartDate = p.StartDate,
+                EndDate = p.EndDate,
+                IsActive = p.IsActive,
+                IsOneTimeUse = p.IsOneTimeUse,
+                Description = p.Description
+            })
+            .ToListAsync();
+    }
+
+    public async Task<PromotionDTOs?> UpdatePromotionAsync(Guid id, UpdatePromotionRequest req)
+    {
+        var promo = await _db.Promotions.FindAsync(id);
+        if (promo == null) return null;
+
+        promo.DiscountType = req.DiscountType;
+        promo.DiscountValue = req.DiscountValue;
+        promo.StartDate = req.StartDate;
+        promo.EndDate = req.EndDate;
+        promo.IsActive = req.IsActive;
+        promo.IsOneTimeUse = req.IsOneTimeUse;
+        promo.Description = req.Description;
+
+        await _db.SaveChangesAsync();
+
+        return new PromotionDTOs
+        {
+            Id = promo.Id,
+            Code = promo.Code,
+            DiscountType = promo.DiscountType,
+            DiscountValue = promo.DiscountValue,
+            StartDate = promo.StartDate,
+            EndDate = promo.EndDate,
+            IsActive = promo.IsActive,
+            IsOneTimeUse = promo.IsOneTimeUse,
+            Description = promo.Description
+        };
+    }
+
+
+
 }

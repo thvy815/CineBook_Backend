@@ -21,6 +21,14 @@ namespace ShowtimeService.API.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, UpdateTheaterDto dto)
+        {
+            var result = await _service.UpdateAsync(id, dto);
+            return result == null ? NotFound() : Ok(result);
+        }
+
+
         [HttpGet("filter-by-province")]
         public async Task<IActionResult> GetTheatersByProvinceAndDate(
         [FromQuery] Guid? provinceId,

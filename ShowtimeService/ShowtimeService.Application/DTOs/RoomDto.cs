@@ -18,6 +18,14 @@
         public string Status { get; set; }
     }
 
+    public class UpdateRoomDto
+    {
+        public Guid TheaterId { get; set; }
+        public string Name { get; set; } = null!;
+        public int SeatCount { get; set; }
+        public string Status { get; set; } = null!;
+    }
+
     public class AutoCreateRoomDto
     {
         public Guid TheaterId { get; set; }

@@ -28,4 +28,15 @@ public class BookingFnbReqDTOs
     public int Quantity { get; set; }
 }
 
+public class BookingListDto
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid ShowtimeId { get; set; }
+    public string Status { get; set; }
+    public string PaymentMethod { get; set; }
+    public string TransactionId { get; set; }
+    public decimal FinalPrice { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
 

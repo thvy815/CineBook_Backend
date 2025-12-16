@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PricingService.Application.Services;
+using PricingService.Domain.DTOs;
 [ApiController]
 [Route("api/pricing")]
 public class PricingController : ControllerBase
@@ -40,5 +41,25 @@ public class PricingController : ControllerBase
     }
 
 
+
+    // 🔹 GET: api/Promotion
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var data = await _business.GetAllPromotionsAsync();
+        return Ok(data);
+    }
+
+    // 🔹 PUT: api/Promotion/{id}
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdatePromotionRequest request)
+    {
+        var result = await _business.UpdatePromotionAsync(id, request);
+        if (result == null) return NotFound("Promotion not found");
+
+        return Ok(result);
+    }
 }
 

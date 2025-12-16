@@ -49,6 +49,29 @@ namespace ShowtimeService.Application.Services
             };
         }
 
+        public async Task<RoomDto?> UpdateAsync(Guid id, UpdateRoomDto dto)
+        {
+            var entity = await _context.Rooms.FindAsync(id);
+            if (entity == null) return null;
+
+            entity.TheaterId = dto.TheaterId;
+            entity.Name = dto.Name;
+            entity.SeatCount = dto.SeatCount;
+            entity.Status = dto.Status;
+
+            await _context.SaveChangesAsync();
+
+            return new RoomDto
+            {
+                Id = entity.Id,
+                TheaterId = entity.TheaterId,
+                Name = entity.Name,
+                SeatCount = entity.SeatCount,
+                Status = entity.Status
+            };
+        }
+
+
         public async Task<IEnumerable<RoomDto>> AutoCreateRoomsAsync(AutoCreateRoomDto dto)
         {
             var theater = await _context.Theaters

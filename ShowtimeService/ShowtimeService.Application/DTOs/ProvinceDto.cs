@@ -10,4 +10,8 @@
     {
         public string Name { get; set; }
     }
+    public class UpdateProvinceDto
+    {
+        public string Name { get; set; } = null!;
+    }
 }

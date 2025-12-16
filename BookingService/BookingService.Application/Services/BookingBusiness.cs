@@ -210,4 +210,26 @@ public class BookingBusiness
     {
         return await _repo.GetByIdAsync(bookingId);
     }
+    // ==============================
+    // 5️⃣ Get all bookings (ADMIN)
+    // ==============================
+    public async Task<List<BookingListDto>> GetAllBookings()
+    {
+        var bookings = await _repo.GetAllAsync();
+
+        return bookings.Select(b => new BookingListDto
+        {
+            Id = b.Id,
+            UserId = b.UserId,
+            ShowtimeId = b.ShowtimeId,
+            Status = b.Status,
+            PaymentMethod = b.PaymentMethod,
+            TransactionId = b.TransactionId,
+            FinalPrice = b.FinalPrice,
+            CreatedAt = b.CreatedAt
+        }).ToList();
+    }
+
+
+
 }
