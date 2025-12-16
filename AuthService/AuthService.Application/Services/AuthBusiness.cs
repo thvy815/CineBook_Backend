@@ -112,7 +112,7 @@ namespace AuthService.Application.Services
 			var accessToken = _tokenService.GenerateAccessToken(user);
 			var refresh = await _tokenService.GenerateRefreshTokenAsync(user, TimeSpan.FromDays(7));
 
-            var userDto = new UserDto(user.Id, user.Username, user.Fullname, user.Email);
+            var userDto = new UserDto(user.Id, user.Username, user.Fullname, user.Email, user.RoleId);
 
             return new AuthResultDto(true, accessToken, refresh.Token, User: userDto);
 		}

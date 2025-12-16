@@ -44,7 +44,8 @@ namespace AuthService.Domain.DTOs
 		Guid Id,
 		string Username,
 		string Fullname,
-		string Email
+		string Email, 
+		int role
 	);
 
     public class UpdateUserRoleStatusDto
